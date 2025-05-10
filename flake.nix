@@ -10,7 +10,7 @@
       celestia = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
-          ./hosts/celestia/configuration.nix
+          (import ./hosts/celestia/configuration.nix)
         ];
       };
     };
