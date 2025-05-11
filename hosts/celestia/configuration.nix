@@ -6,17 +6,19 @@
     ./tailscale.nix
     ./caddy.nix
     ./nix.nix
+    ./openssh.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = "celestia";
-  services.openssh.enable = true;
 
   networking.networkmanager.enable = true;
 
   system.stateVersion = "24.11";
+
+  security.sudo.wheelNeedsPassword = false;
 
   users.users = {
     root = {
