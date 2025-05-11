@@ -4,12 +4,17 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
     self,
     nixpkgs,
-    flake-parts
+    flake-parts,
+    nixos-generators,
   }:
   flake-parts.lib.mkFlake {inherit inputs;} {
     systems = [
@@ -42,6 +47,18 @@
           --target-host mbk@$1 \
           --build-host mbk@$1
       '';
+
+      # TODO: generic iso generation
+      packages.celestia-installer = nixos-generators.nixosGenerate {
+        system = "x86_64-linux";
+        modules = [
+          {
+            nix.registry.nixpkgs.flake = nixpkgs;
+          }
+          (import ./hosts/celestia/configuration.nix)
+        ];
+        format = "install-iso";
+      };
     };
   };
 }
