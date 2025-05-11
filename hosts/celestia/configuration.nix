@@ -14,17 +14,11 @@
 
   networking.hostName = "celestia";
 
-  networking.networkmanager.enable = true;
-
   system.stateVersion = "24.11";
 
   security.sudo.wheelNeedsPassword = false;
 
   users.users = {
-    root = {
-      initialPassword = "hunter2";
-    };
-
     mbk = {
       isNormalUser = true;
       description = "mehbark";
