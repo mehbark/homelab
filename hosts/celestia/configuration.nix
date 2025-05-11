@@ -4,6 +4,8 @@
     ./hardware-configuration.nix
     ./firewall.nix
     ./tailscale.nix
+    ./caddy.nix
+    ./nix.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
@@ -11,6 +13,8 @@
 
   networking.hostName = "celestia";
   services.openssh.enable = true;
+
+  networking.networkmanager.enable = true;
 
   system.stateVersion = "24.11";
 
