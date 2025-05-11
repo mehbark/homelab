@@ -6,8 +6,9 @@
     globalConfig = ''
       auto_https off
     '';
-    virtualHosts."celestia.pyrope.net:80".extraConfig = ''
-      respond "Hello, world!"
+    virtualHosts."http://celestia.pyrope.net".extraConfig = ''
+      root * /var/www/static
+      file_server browse
     '';
   };
 }
