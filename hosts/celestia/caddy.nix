@@ -4,9 +4,9 @@
   services.caddy = {
     enable = true;
     globalConfig = ''
-      auto_https disable_redirects
+      auto_https off
     '';
-    virtualHosts."celestia.pyrope.net".extraConfig = ''
+    virtualHosts."celestia.pyrope.net:80".extraConfig = ''
       respond "Hello, world!"
     '';
   };
