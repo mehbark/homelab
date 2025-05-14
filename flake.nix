@@ -36,11 +36,14 @@
     let pkgs = import nixpkgs { inherit system; }; in
     {
       packages.deploy = pkgs.writeShellScriptBin "deploy" ''
+        TARGET_HOST="$1"
+        BUILD_HOST="''${2:-$TARGET_HOST}"
+        echo "building on $BUILD_HOST and deploying to $TARGET_HOST"
         ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
-          --fast --flake .#$1 \
+          --fast --flake ".#$TARGET_HOST" \
           --use-remote-sudo \
-          --target-host mbk@$1 \
-          --build-host mbk@$1
+          --target-host "mbk@$TARGET_HOST" \
+          --build-host "mbk@$BUILD_HOST"
       '';
     };
   };
