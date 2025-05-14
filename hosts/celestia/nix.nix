@@ -9,6 +9,7 @@
 
     settings = {
       allowed-users = [ "@wheel" ];
+      trusted-users = [ "@wheel" ];
       substituters = [
         "https://nix-community.cachix.org"
       ];
