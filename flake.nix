@@ -25,6 +25,13 @@
             (import ./hosts/celestia/configuration.nix)
           ];
         };
+
+        derpy = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            (import ./hosts/derpy/configuration.nix)
+          ];
+        };
       };
     };
 
@@ -38,9 +45,12 @@
       packages.deploy = pkgs.writeShellScriptBin "deploy" ''
         TARGET_HOST="$1"
         BUILD_HOST="''${2:-$TARGET_HOST}"
+
         echo "building on $BUILD_HOST and deploying to $TARGET_HOST"
+
+        export NIX_SSHOPTS="-o RequestTTY=force"
         ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
-          --fast --flake ".#$TARGET_HOST" \
+          --fast --flake "github:mehbark/homelab#$TARGET_HOST" \
           --use-remote-sudo \
           --target-host "mbk@$TARGET_HOST" \
           --build-host "mbk@$BUILD_HOST"
