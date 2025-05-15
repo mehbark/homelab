@@ -5,6 +5,8 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      # jellyfin is probably best on celestia but i'm doing the ripping here so
+      ./jellyfin.nix
     ];
 
   nix = {
