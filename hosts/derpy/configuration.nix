@@ -130,6 +130,8 @@
   neovim
   kitty
   espeak
+  abcde
+  vlc
   ];
 
   services.gvfs.enable = true;
