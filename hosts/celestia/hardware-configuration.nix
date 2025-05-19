@@ -24,7 +24,7 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
-  fileSystems."/var/www/static" =
+  fileSystems."/srv" =
   { device = "/dev/disk/by-uuid/45a3e338-c4b1-4300-a3d3-d4c9db512d1d";
     fsType = "ext4";
   };

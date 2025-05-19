@@ -6,8 +6,9 @@
     globalConfig = ''
       auto_https off
     '';
-    virtualHosts."http://celestia.pyrope.net".extraConfig = ''
-      root * /var/www/static
+    virtualHosts.":80".extraConfig = ''
+      root * /srv/www
+      encode zstd gzip
       file_server browse
     '';
   };
