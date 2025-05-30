@@ -55,9 +55,15 @@
           --target-host "mbk@$TARGET_HOST" \
           --build-host "mbk@$BUILD_HOST"
       '';
-      packages.ponyfetch = pkgs.writeShellScriptBin "ponyfetch" ''
-        ssh "mbk@$1" nix run nixpkgs#fastfetch -- --pipe false | ponysay -b round -W 120 -f "$1"
-      '';
+      packages.ponyfetch = pkgs.writeShellApplication {
+        name = "ponyfetch";
+        runtimeInputs = [
+          pkgs.ponysay
+        ];
+        text = ''
+          ssh "mbk@$1" nix run nixpkgs#fastfetch -- --pipe false | ponysay -b round -W 120 -f "$1"
+        '';
+      };
     };
   };
 }
