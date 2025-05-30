@@ -58,10 +58,15 @@
       packages.ponyfetch = pkgs.writeShellApplication {
         name = "ponyfetch";
         runtimeInputs = [
+          pkgs.fastfetch
           pkgs.ponysay
         ];
         text = ''
-          ssh "mbk@$1" nix run nixpkgs#fastfetch -- --pipe false | ponysay -b round -W 120 -f "$1"
+          if [[ $# -eq 1 ]]; then
+            ssh "mbk@$1" nix run nixpkgs#fastfetch -- --pipe false | ponysay -b round -W 120 -f "$1"
+          else
+            fastfetch --pipe false | ponysay -b round -W 120 -f "$(hostname)"
+          fi
         '';
       };
     };
