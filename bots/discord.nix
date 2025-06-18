@@ -12,12 +12,13 @@ let basic-bot = name: src:
         after = [ "network.target" ];
         serviceConfig = {
           ExecStart = ''
-            ${pkgs.deno}/bin/deno --allow-net "--allow-read=${bot-config}" ${src} "${bot-config}"
+            ${pkgs.deno}/bin/deno --allow-net '--allow-read=${bot-config}' '${src}' '${bot-config}'
           '';
         };
       };
     };
   }; in
+# TODO: i'm fairly sure this will break for as few as literally two bots. fix!
 lib.attrsets.mergeAttrsList [
   (basic-bot "mcai-checker" "${./mcai-checker.ts}")
 ]
