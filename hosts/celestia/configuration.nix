@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, ... }@args:
 {
   imports = [
     ./hardware-configuration.nix
@@ -7,7 +7,10 @@
     ./caddy.nix
     ./nix.nix
     ./openssh.nix
+    ../../bots/discord.nix
   ];
+
+  bots.discord.mcai-checker.enable = true;
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
