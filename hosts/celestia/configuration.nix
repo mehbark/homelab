@@ -7,6 +7,7 @@
     ./caddy.nix
     ./nix.nix
     ./openssh.nix
+    ./ollama.nix
     ../../bots/discord.nix
   ];
 
