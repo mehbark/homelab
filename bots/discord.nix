@@ -1,5 +1,5 @@
 { lib, config, pkgs, ... }:
-let basic-bot = name: src:
+let basic-bot = name: src: { additionalArgs ? [] }:
   let
     cfg = config.bots.discord.${name};
     bot-config = "/home/mbk/bots/discord/${name}.json";
@@ -16,7 +16,10 @@ let basic-bot = name: src:
       };
       serviceConfig = {
         ExecStart = ''
-          ${pkgs.deno}/bin/deno --allow-net '--allow-read=${bot-config}' '${src}' '${bot-config}'
+          ${pkgs.deno}/bin/deno \
+             ${lib.escapeShellArgs additionalArgs} \
+             --allow-net --allow-read=${lib.escapeShellArg bot-config} \
+             ${lib.escapeShellArg src} ${lib.escapeShellArg bot-config}
         '';
         Restart = "on-failure";
       };
@@ -24,6 +27,6 @@ let basic-bot = name: src:
   };
 in
 lib.foldr lib.attrsets.recursiveUpdate {} [
-  (basic-bot "mcai-checker" "${./mcai-checker.ts}")
-  (basic-bot "puyo" "${./puyo.ts}")
+  (basic-bot "mcai-checker" "${./mcai-checker.ts}" {})
+  (basic-bot "puyo" "${./puyo.ts}" { additionalArgs = ["--unstable-kv"]; })
 ]
