@@ -197,8 +197,7 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
         );
     },
     async oob() {
-        const dialogue =
-            oob_dialogue[Math.floor(Math.random() * oob_dialogue.length)];
+        const dialogue_idx = Math.floor(Math.random() * oob_dialogue.length);
 
         const response = await ollama.chat({
             model: "gemma3:4b",
@@ -206,16 +205,28 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 {
                     role: "system",
                     content:
-                        "respond with a short message with a dozen words or less as if you are continuing an imaginary conversation. mimic the style of undertale's character and inspect dialogue. try to create a punchline if reasonable.",
+                        "finish the conversation with a short, one-line message. create a punchline if one makes sense.",
                 },
                 {
                     role: "user",
-                    content: dialogue,
+                    content: oob_dialogue[dialogue_idx],
+                },
+                {
+                    role: "assistant",
+                    content: oob_dialogue[dialogue_idx + 1],
+                },
+                {
+                    role: "user",
+                    content: oob_dialogue[dialogue_idx + 2],
                 },
             ],
         });
-        return "```\n" + dialogue + "\n```\n```\n" +
-            response.message.content.replaceAll(/[“”"]/g, "") +
+        const punchline = response.message.content.replaceAll(/[“”"]/g, "");
+        return "```\n" +
+            [...oob_dialogue.slice(dialogue_idx, dialogue_idx + 3), punchline]
+                .join(
+                    "\n```\n```\n",
+                ) +
             "\n```";
     },
 };
