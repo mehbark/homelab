@@ -176,7 +176,7 @@ async function run(
         }
         return popped.thunk;
     };
-    const popb = (): boolean => popn() == 1;
+    const popb = (): boolean => popn() != 0;
     const pop = (): Val => stack.pop() ?? 0;
 
     const ops: Record<string, () => Promise<void>> = {
