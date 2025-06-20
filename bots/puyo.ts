@@ -176,7 +176,19 @@ async function run(
     env: Record<string, Val> = {},
     depth: number = 0,
 ): Promise<void> {
-    if (depth > 1000) throw "recursion limit reached";
+    function explode(msg = "i esploded") {
+        throw msg + "\n" + "stack:\n" +
+            stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
+                "\n",
+            ) +
+            `\nenv:\n${
+                Object.entries(env).toSorted().map(([k, v]) =>
+                    `- ${stringOfVal(v)} →${k}`
+                ).join("\n")
+            }`;
+    }
+
+    if (depth > 1000) explode("recursion limit reached");
     const push = (x: Val) => stack.push(x);
     const popn = (): number => {
         const popped = stack.pop();
@@ -260,21 +272,18 @@ async function run(
         async "self"() {
             push({
                 thunk: async () => {
-                    await run(args, stack, env, depth + 1);
+                    await run(
+                        args,
+                        stack,
+                        env,
+                        depth + 1,
+                    );
                 },
                 src: args,
             });
         },
         async "explode"() {
-            throw "stack:\n" +
-                stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
-                    "\n",
-                ) +
-                `\nenv:\n${
-                    Object.entries(env).toSorted().map(([k, v]) =>
-                        `- ${stringOfVal(v)} →${k}`
-                    ).join("\n")
-                }`;
+            explode();
         },
         async "floor"() {
             push(Math.floor(popn()));
@@ -310,7 +319,12 @@ async function run(
             const subr = args.slice(i + 1, close);
             push({
                 thunk: async () => {
-                    await run(subr, stack, env, depth + 1);
+                    await run(
+                        subr,
+                        stack,
+                        Object.setPrototypeOf({}, env),
+                        depth + 1,
+                    );
                 },
                 src: subr,
             });
@@ -382,8 +396,8 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
         );
     },
     async run(args) {
-        const err = await run(args).catch((e) => e as string);
-        if (err) return err;
+        const err = await run(args).catch((e) => e);
+        if (err) return err.toString();
         return board.status();
     },
 };
