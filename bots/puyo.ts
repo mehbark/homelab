@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await
 import { Client, Events, GatewayIntentBits } from "npm:discord.js";
 
 const { default: { token, id } } = await import(Deno.args[0], {
@@ -114,6 +115,11 @@ const board = {
         ].join("\n");
     },
 
+    async get({ x, y }: { x: number; y: number }): Promise<Square | undefined> {
+        if (!this.inBounds(x, y)) return;
+        return (await this.squares())[y][x];
+    },
+
     async set(
         { x, y, sq }: { x: number; y: number; sq: Square },
     ): Promise<boolean> {
@@ -140,6 +146,149 @@ await board.init();
 const oob_dialogue = new TextDecoder().decode(
     await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
 ).split("\n");
+
+type Val = number | { thunk: () => Promise<void>; src: string[] };
+
+function stringOfVal(x: Val): string {
+    if (typeof x == "number") return `\`${x.toString()}\``;
+    return "`( " + x.src.join(" ") + " )`";
+}
+
+async function run(
+    args: string[],
+    stack: Val[] = [],
+    depth: number = 0,
+): Promise<void> {
+    if (depth > 1000) throw "recursion limit reached";
+    const push = (x: Val) => stack.push(x);
+    const popn = (): number => {
+        const popped = stack.pop();
+        if (!popped || typeof popped != "number") return 0;
+        return popped;
+    };
+    const popf = (): () => Promise<void> => {
+        const popped = stack.pop();
+        if (typeof popped == "undefined") return async () => {};
+        if (typeof popped == "number") {
+            return async () => {
+                push(popped);
+            };
+        }
+        return popped.thunk;
+    };
+    const popb = (): boolean => popn() == 1;
+    const pop = (): Val => stack.pop() ?? 0;
+
+    const ops: Record<string, () => Promise<void>> = {
+        async "+"() {
+            push(popn() + popn());
+        },
+        async "-"() {
+            push(popn() - popn());
+        },
+        async "*"() {
+            push(popn() * popn());
+        },
+        async "/"() {
+            push(popn() / popn());
+        },
+        async "="() {
+            push(popn() == popn() ? 1 : 0);
+        },
+        async "!"() {
+            await popf()();
+        },
+        async "get"() {
+            const y = popn();
+            const x = popn();
+            push(await board.get({ x, y }) ?? 0);
+        },
+        async "set"() {
+            const color = popn() % 6;
+            const y = popn();
+            const x = popn();
+            await board.set({ x, y, sq: color as Square });
+        },
+        async "dup"() {
+            const top = pop();
+            push(top);
+            push(top);
+        },
+        async "swap"() {
+            const fst = pop();
+            const snd = pop();
+            push(fst);
+            push(snd);
+        },
+        async "ite"() {
+            const els = popf();
+            const then = popf();
+            const bool = popb();
+            if (bool) {
+                await then();
+            } else {
+                await els();
+            }
+        },
+        async "self"() {
+            push({
+                thunk: async () => {
+                    await run(args, stack, depth + 1);
+                },
+                src: args,
+            });
+        },
+        async "explode"() {
+            throw "stack:\n" +
+                stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
+                    "\n",
+                );
+        },
+    };
+
+    let i = 0;
+    for (let step = 0; step < 1000 && i < args.length; step++) {
+        const arg = args[i];
+        const num = Number.parseInt(arg);
+        if (Number.isFinite(num)) {
+            push(num);
+        } else if (arg in ops) {
+            await ops[arg]();
+        } else if (arg == "(") {
+            let close = -1;
+            let depth = 0;
+            for (let search = i; search < args.length; search++) {
+                if (args[search] == "(") {
+                    depth += 1;
+                } else if (args[search] == ")") {
+                    depth -= 1;
+                }
+                if (depth < 0) throw "unmatched )";
+                if (depth == 0) {
+                    close = search;
+                    break;
+                }
+            }
+            if (close == -1) {
+                throw "unmatched (";
+            }
+            const subr = args.slice(i + 1, close);
+            push({
+                thunk: async () => {
+                    await run(subr, stack);
+                },
+                src: subr,
+            });
+            i = close;
+        } else if (arg == ")") {
+            throw "unmatched )";
+        } else {
+            throw `idk what \`${arg}\` means`;
+        }
+        i++;
+    }
+    return;
+}
 
 const commands: Record<string, (args: string[]) => Promise<string>> = {
     async clear() {
@@ -197,6 +346,11 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 "\n```",
         );
     },
+    async run(args) {
+        const err = await run(args).catch((e) => e as string);
+        if (err) return err;
+        return board.status();
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
@@ -205,11 +359,17 @@ client.on("messageCreate", async (message) => {
     if (message.author == id || !message.mentions.has(id)) return;
 
     const is_admin = message.author.id == mehbark;
-    const cmds = message.content.toLowerCase().split(/;+/).filter((x) =>
-        x.match(/[^ ]/)
-    ).map((cmd) =>
-        cmd.split(/\s+/).filter((arg) => arg != "" && !arg.includes("@"))
-    );
+    const cmds = message.content.toLowerCase()
+        .replaceAll(
+            /[()]/g,
+            (p) => ` ${p} `,
+        )
+        .replaceAll("`", "")
+        .split(/;+/)
+        .filter((x) => x.match(/[^ ]/))
+        .map((cmd) =>
+            cmd.split(/\s+/).filter((arg) => arg != "" && !arg.includes("@"))
+        );
     console.log(`${message.author.id}: running ${cmds.length} commands`);
     const outputs = [];
     for (const args of cmds) {
