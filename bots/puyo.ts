@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits } from "npm:discord.js";
 import { assert } from "jsr:@std/assert";
+import ollama from "npm:ollama";
 
 const { default: { token, id } } = await import(Deno.args[0], {
     with: { type: "json" },
@@ -195,12 +196,27 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 ).join("\n"),
         );
     },
-    oob() {
-        return Promise.resolve(
-            "```\n" +
-                oob_dialogue[Math.floor(Math.random() * oob_dialogue.length)] +
-                "\n```",
-        );
+    async oob() {
+        const dialogue =
+            oob_dialogue[Math.floor(Math.random() * oob_dialogue.length)];
+
+        const response = await ollama.chat({
+            model: "gemma3:4b",
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "respond with a short message with a dozen words or less as if you are continuing an imaginary conversation. mimic the style of undertale's character and inspect dialogue. try to create a punchline if reasonable.",
+                },
+                {
+                    role: "user",
+                    content: dialogue,
+                },
+            ],
+        });
+        return "```\n" + dialogue + "\n```\n```\n" +
+            response.message.content.replaceAll(/[“”"]/g, "") +
+            "\n```";
     },
 };
 
