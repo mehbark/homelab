@@ -24,7 +24,7 @@ client.once(Events.ClientReady, (c: Client<true>) => {
 
 client.login(token);
 
-const db = await Deno.openKv();
+const db = await Deno.openKv("/home/mbk/bots/discord/puyo.kv");
 
 const mehbark = "354988989100589058";
 
@@ -46,6 +46,28 @@ const square_names = Object.fromEntries(
 function squareToEmoji(sq: Square): string {
     if (sq == square.empty) return ":black_large_square:";
     return `:${square_names[sq]}_square:`;
+}
+
+function numberToEmoji(n: number, pad = 0): string {
+    const digits = `${Math.abs(n)}`.split("");
+    const padding = new Array(Math.max(0, pad - digits.length)).fill(
+        ":white_large_square:",
+    );
+    const digits_emoji = digits.map((d) =>
+        [
+            ":zero:",
+            ":one:",
+            ":two:",
+            ":three:",
+            ":four:",
+            ":five:",
+            ":six:",
+            ":seven:",
+            ":eight:",
+            ":nine:",
+        ][Number.parseInt(d)]
+    );
+    return [...padding, ...digits_emoji].join("");
 }
 
 const board = {
@@ -88,16 +110,26 @@ const board = {
     },
 
     async init({ force = false } = {}) {
-        if (!force && (await db.get(["board"])).value != null) return;
+        if (!force && (await db.get(["board", 0, 0])).value != null) return;
         await Promise.all(this.mapSquareIndices((x, y) => {
             return db.set(["board", x, y], square.empty);
         }));
     },
 
     async status(): Promise<string> {
-        return (await this.mapRows(({ square }) =>
-            Promise.resolve(squareToEmoji(square))
-        )).map((row) => row.join("")).join("\n");
+        const rows =
+            (await this.mapRows(({ square }) =>
+                Promise.resolve(squareToEmoji(square))
+            )).map((row) => row.join("")).map((r, i) =>
+                `${numberToEmoji(i, 2)}${r}`
+            );
+        return [
+            ":white_large_square::white_large_square:" +
+            new Array(board.width).fill(undefined).map((_, i) =>
+                numberToEmoji(i)
+            ).join(""),
+            ...rows,
+        ].join("\n");
     },
 
     async set(
@@ -115,6 +147,16 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
     async clear() {
         await board.init({ force: true });
         return "db cleared";
+    },
+    async dump() {
+        const out = [];
+        for await (const sq of db.list({ prefix: ["board"] })) {
+            out.push(sq);
+        }
+        return "```json\n" + JSON.stringify(out).slice(0, 1900) + "\n```";
+    },
+    die() {
+        Deno.exit(2);
     },
     async set(args) {
         const usage = "```\nUSAGE:\nset x y (" +
@@ -151,7 +193,7 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
     },
 };
 
-const admin_commands: string[] = ["clear"];
+const admin_commands: string[] = ["clear", "dump", "die"];
 
 client.on("messageCreate", async (message) => {
     if (message.author == id || !message.mentions.has(id)) return;
@@ -160,6 +202,7 @@ client.on("messageCreate", async (message) => {
     const args = message.content.toLowerCase().split(/\s+/).filter((arg) =>
         !arg.includes("@")
     );
+    console.log(`${message.author.id}: ${JSON.stringify(args)}`);
     if (
         args[0] && args[0] in commands &&
         (is_admin || !admin_commands.includes(args[0]))
