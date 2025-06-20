@@ -184,13 +184,19 @@ async function run(
             push(popn() + popn());
         },
         async "-"() {
-            push(popn() - popn());
+            const subtrahend = popn();
+            const minuend = popn();
+            // now (1 -) subtracts one from the top of the stack
+            push(minuend - subtrahend);
         },
         async "*"() {
             push(popn() * popn());
         },
         async "/"() {
-            push(popn() / popn());
+            const divisor = popn();
+            const dividend = popn();
+            // now (2 /) divides the top of the stack by 2
+            push(dividend / divisor);
         },
         async "="() {
             push(popn() == popn() ? 1 : 0);
@@ -207,7 +213,11 @@ async function run(
             const color = popn() % 6;
             const y = popn();
             const x = popn();
-            await board.set({ x, y, sq: color as Square });
+            await board.set({
+                x,
+                y,
+                sq: Math.floor(Math.abs(color)) as Square,
+            });
         },
         async "dup"() {
             const top = pop();
@@ -243,6 +253,18 @@ async function run(
                 stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
                     "\n",
                 );
+        },
+        async "floor"() {
+            push(Math.floor(popn()));
+        },
+        async "sin"() {
+            push(Math.sin(popn()));
+        },
+        async "cos"() {
+            push(Math.cos(popn()));
+        },
+        async "tan"() {
+            push(Math.tan(popn()));
         },
     };
 
