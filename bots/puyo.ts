@@ -1,5 +1,4 @@
 import { Client, Events, GatewayIntentBits } from "npm:discord.js";
-import { assert } from "jsr:@std/assert";
 
 const { default: { token, id } } = await import(Deno.args[0], {
     with: { type: "json" },
@@ -38,6 +37,7 @@ const square = {
 } as const;
 
 type Square = (typeof square)[keyof typeof square];
+type Board = Square[][];
 
 const square_names = Object.fromEntries(
     Object.entries(square).map(([k, v]) => [v, k]),
@@ -78,51 +78,33 @@ const board = {
         return 0 <= x && x < this.width && 0 <= y && y < this.height;
     },
 
-    mapSquareIndices<T>(proc: (x: number, y: number) => T): T[] {
-        const out = [];
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                out.push(proc(x, y));
-            }
-        }
-        return out;
-    },
-
-    mapRows<T>(
-        proc: (sq: { x: number; y: number; square: Square }) => Promise<T>,
-    ): Promise<T[][]> {
+    mapRowIndices<T>(proc: (x: number, y: number) => T): T[][] {
         const out = [];
         for (let y = 0; y < this.height; y++) {
             const row = [];
             for (let x = 0; x < this.width; x++) {
-                row.push(
-                    db.get(["board", x, y]).then(({ value }) => {
-                        assert(
-                            typeof value == "number" && value in square_names,
-                        );
-                        return proc({ x, y, square: value as Square });
-                    }),
-                );
+                row.push(proc(x, y));
             }
-            out.push(Promise.all(row));
+            out.push(row);
         }
-        return Promise.all(out);
+        return out;
+    },
+
+    async squares(): Promise<Board> {
+        return (await db.get(["board"])).value as Board;
     },
 
     async init({ force = false } = {}) {
-        if (!force && (await db.get(["board", 0, 0])).value != null) return;
-        await Promise.all(this.mapSquareIndices((x, y) => {
-            return db.set(["board", x, y], square.empty);
-        }));
+        if (!force && (await db.get(["board"])).value != null) return;
+        await db.set(["board"], this.mapRowIndices(() => square.empty));
     },
 
     async status(): Promise<string> {
-        const rows =
-            (await this.mapRows(({ square }) =>
-                Promise.resolve(squareToEmoji(square))
-            )).map((row) => row.join("")).map((r, i) =>
-                `${numberToEmoji(i, 2)}${r}`
-            );
+        const rows = (await this.squares()).map((row, y) =>
+            `${numberToEmoji(y, 2)}${
+                row.map((sq) => squareToEmoji(sq)).join("")
+            }`
+        );
         return [
             ":white_large_square::white_large_square:" +
             new Array(board.width).fill(undefined).map((_, i) =>
@@ -136,6 +118,18 @@ const board = {
         { x, y, sq }: { x: number; y: number; sq: Square },
     ): Promise<boolean> {
         if (!this.inBounds(x, y)) return false;
+        const board = await db.get(["board"]);
+        if (!Array.isArray(board.value)) {
+            console.error("what is this garbage", board);
+            return false;
+        }
+        await db.atomic()
+            .check(board)
+            .set(
+                ["board"],
+                board.value.with(y, board.value[y].with(x, sq)),
+            )
+            .commit();
         await db.set(["board", x, y], sq);
         return true;
     },
@@ -160,6 +154,7 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
         return "```json\n" + JSON.stringify(out).slice(0, 1900) + "\n```";
     },
     die() {
+        console.log("dying on purpose rn");
         Deno.exit(2);
     },
     async set(args) {
@@ -210,18 +205,28 @@ client.on("messageCreate", async (message) => {
     if (message.author == id || !message.mentions.has(id)) return;
 
     const is_admin = message.author.id == mehbark;
-    const args = message.content.toLowerCase().split(/\s+/).filter((arg) =>
-        !arg.includes("@")
+    const cmds = message.content.toLowerCase().split(/;+/).filter((x) =>
+        x.match(/[^ ]/)
+    ).map((cmd) =>
+        cmd.split(/\s+/).filter((arg) => arg != "" && !arg.includes("@"))
     );
-    console.log(`${message.author.id}: ${JSON.stringify(args)}`);
-    if (
-        args[0] && args[0] in commands &&
-        (is_admin || !admin_commands.includes(args[0]))
-    ) {
-        message.reply((await commands[args[0]](args.slice(1))).slice(0, 2000));
-    } else {
-        message.reply(
-            (await commands.help([])).slice(0, 1900),
-        );
+    console.log(`${message.author.id}: running ${cmds.length} commands`);
+    const outputs = [];
+    for (const args of cmds) {
+        console.log(`| ${message.author.id}: ${JSON.stringify(args)}`);
+        if (
+            args[0] && args[0] in commands &&
+            (is_admin || !admin_commands.includes(args[0]))
+        ) {
+            const res = await commands[args[0]](args.slice(1));
+            outputs.push(res);
+        } else {
+            const res = await commands.help([]);
+            outputs.push(res);
+        }
     }
+    await message.reply((outputs.at(-1) ?? "").slice(0, 2000));
+    console.log(
+        `${message.author.id}: finished running ${cmds.length} commands`,
+    );
 });
