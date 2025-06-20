@@ -1,6 +1,5 @@
 import { Client, Events, GatewayIntentBits } from "npm:discord.js";
 import { assert } from "jsr:@std/assert";
-import ollama from "npm:ollama";
 
 const { default: { token, id } } = await import(Deno.args[0], {
     with: { type: "json" },
@@ -196,38 +195,12 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 ).join("\n"),
         );
     },
-    async oob() {
-        const dialogue_idx = Math.floor(Math.random() * oob_dialogue.length);
-
-        const response = await ollama.chat({
-            model: "gemma3:4b",
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "finish the conversation with a short, one-line message. create a punchline if one makes sense.",
-                },
-                {
-                    role: "user",
-                    content: oob_dialogue[dialogue_idx],
-                },
-                {
-                    role: "assistant",
-                    content: oob_dialogue[dialogue_idx + 1],
-                },
-                {
-                    role: "user",
-                    content: oob_dialogue[dialogue_idx + 2],
-                },
-            ],
-        });
-        const punchline = response.message.content.replaceAll(/[“”"]/g, "");
-        return "```\n" +
-            [...oob_dialogue.slice(dialogue_idx, dialogue_idx + 3), punchline]
-                .join(
-                    "\n```\n```\n",
-                ) +
-            "\n```";
+    oob() {
+        return Promise.resolve(
+            "```\n" +
+                oob_dialogue[Math.floor(Math.random() * oob_dialogue.length)] +
+                "\n```",
+        );
     },
 };
 
