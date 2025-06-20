@@ -28,5 +28,12 @@ let basic-bot = name: src: { additionalArgs ? [] }:
 in
 lib.foldr lib.attrsets.recursiveUpdate {} [
   (basic-bot "mcai-checker" "${./mcai-checker.ts}" {})
-  (basic-bot "puyo" "${./puyo.ts}" { additionalArgs = ["--unstable-kv" "--allow-read=/home/mbk/bots/discord/puyo.kv" "--allow-write=/home/mbk/bots/discord/puyo.kv"]; })
+  (basic-bot "puyo" "${./puyo.ts}" {
+    additionalArgs = [
+      "--unstable-kv"
+      "--allow-read=/home/mbk/bots/discord/puyo.kv"
+      "--allow-read=/home/mbk/bots/discord/dr-dump.txt"
+      "--allow-write=/home/mbk/bots/discord/puyo.kv"
+    ];
+  })
 ]

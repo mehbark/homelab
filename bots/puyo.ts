@@ -143,6 +143,10 @@ const board = {
 
 await board.init();
 
+const oob_dialogue = new TextDecoder().decode(
+    await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
+).split("\n");
+
 const commands: Record<string, (args: string[]) => Promise<string>> = {
     async clear() {
         await board.init({ force: true });
@@ -189,6 +193,13 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 Object.keys(commands).toSorted().map((k) =>
                     `- ${k}${admin_commands.includes(k) ? " (admin)" : ""}`
                 ).join("\n"),
+        );
+    },
+    oob() {
+        return Promise.resolve(
+            "```\n" +
+                oob_dialogue[Math.floor(Math.random() * oob_dialogue.length)] +
+                "\n```",
         );
     },
 };
