@@ -154,9 +154,26 @@ function stringOfVal(x: Val): string {
     return "`( " + x.src.join(" ") + " )`";
 }
 
+function closingParenIndex(args: string[], start: number): number {
+    let depth = 0;
+    for (let search = start; search < args.length; search++) {
+        if (args[search] == "(") {
+            depth += 1;
+        } else if (args[search] == ")") {
+            depth -= 1;
+        }
+        if (depth < 0) throw "unmatched )";
+        if (depth == 0) {
+            return search;
+        }
+    }
+    return -1;
+}
+
 async function run(
     args: string[],
     stack: Val[] = [],
+    env: Record<string, Val> = {},
     depth: number = 0,
 ): Promise<void> {
     if (depth > 1000) throw "recursion limit reached";
@@ -243,7 +260,7 @@ async function run(
         async "self"() {
             push({
                 thunk: async () => {
-                    await run(args, stack, depth + 1);
+                    await run(args, stack, env, depth + 1);
                 },
                 src: args,
             });
@@ -252,7 +269,12 @@ async function run(
             throw "stack:\n" +
                 stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
                     "\n",
-                );
+                ) +
+                `\nenv:\n${
+                    Object.entries(env).toSorted().map(([k, v]) =>
+                        `- ${stringOfVal(v)} →${k}`
+                    ).join("\n")
+                }`;
         },
         async "floor"() {
             push(Math.floor(popn()));
@@ -274,30 +296,21 @@ async function run(
         const num = Number.parseInt(arg);
         if (Number.isFinite(num)) {
             push(num);
+        } else if (arg.match(/^(->|→)/)) {
+            env[arg.replace(/->|→/, "")] = pop();
+        } else if (arg in env) {
+            push(env[arg]);
         } else if (arg in ops) {
             await ops[arg]();
         } else if (arg == "(") {
-            let close = -1;
-            let depth = 0;
-            for (let search = i; search < args.length; search++) {
-                if (args[search] == "(") {
-                    depth += 1;
-                } else if (args[search] == ")") {
-                    depth -= 1;
-                }
-                if (depth < 0) throw "unmatched )";
-                if (depth == 0) {
-                    close = search;
-                    break;
-                }
-            }
+            const close = closingParenIndex(args, i);
             if (close == -1) {
                 throw "unmatched (";
             }
             const subr = args.slice(i + 1, close);
             push({
                 thunk: async () => {
-                    await run(subr, stack);
+                    await run(subr, stack, env, depth + 1);
                 },
                 src: subr,
             });
