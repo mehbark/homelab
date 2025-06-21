@@ -331,6 +331,22 @@ async function run(
             i = close;
         } else if (arg == ")") {
             throw "unmatched )";
+        } else if (arg.includes("/")) {
+            const [namespace, def] = arg.split("/", 2);
+            const { value } = await db.get<string[]>([
+                "run",
+                "def",
+                namespace,
+                def,
+            ]);
+            if (value == null) throw `${def} not found in ${namespace}`;
+            // ha
+            const substack: Val[] = [];
+            await run(value, substack, {}, depth);
+            const val = substack.pop() ?? 0;
+            // cache def
+            env[arg] = val;
+            push(val);
         } else {
             throw `idk what \`${arg}\` means`;
         }
@@ -400,6 +416,13 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
         if (err) return err.toString();
         return board.status();
     },
+    async define([namespace, name, ...args]) {
+        if (!namespace || !name || args.length == 0) {
+            return "i need `name program...`";
+        }
+        await db.set(["run", "def", namespace, name], args);
+        return `defined \`${name}\` in \`${namespace}\` (\`${namespace}/${name}\`)`;
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
@@ -423,7 +446,11 @@ client.on("messageCreate", async (message) => {
     const outputs = [];
     for (const args of cmds) {
         console.log(`| ${message.author.id}: ${JSON.stringify(args)}`);
-        if (
+        if (args[0] == "define") {
+            const username = message.author.username;
+            const res = await commands.define([username, ...args.slice(1)]);
+            outputs.push(res);
+        } else if (
             args[0] && args[0] in commands &&
             (is_admin || !admin_commands.includes(args[0]))
         ) {
