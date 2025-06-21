@@ -1,4 +1,5 @@
 // deno-lint-ignore-file require-await
+import { Buffer } from "node:buffer";
 import { Client, Events, GatewayIntentBits } from "npm:discord.js";
 
 const { default: { token, id } } = await import(Deno.args[0], {
@@ -139,6 +140,15 @@ const board = {
         await db.set(["board", x, y], sq);
         return true;
     },
+    // todo: bigger board by making an image
+    // async pngBuffer() {
+    //     const bitmap = await createImageBitmap(null as any);
+    //     const squares = await this.squares();
+    //     for (const row of squares) {
+    //         for (const square of row) {
+    //         }
+    //     }
+    // },
 };
 
 await board.init();
@@ -192,12 +202,74 @@ async function getDef(
     return stack.pop() ?? 0;
 }
 
+const Local = Symbol("local");
+const Above = Symbol("above");
+
+type Env = Record<string, Val> | { [Local]: Record<string, Val>; [Above]: Env };
+
+function lookup(env: Env, key: string): Val | undefined {
+    if (Local in env) {
+        if (key in env[Local]) {
+            return env[Local][key];
+        } else {
+            return lookup(env[Above], key);
+        }
+    } else {
+        return env[key];
+    }
+}
+
+function has(env: Env, key: string): boolean {
+    return typeof lookup(env, key) != "undefined";
+}
+
+function set(env: Env, key: string, val: Val) {
+    if (Above in env) {
+        if (has(env[Above], key)) {
+            set(env[Above], key, val);
+        } else {
+            env[Local][key] = val;
+        }
+    } else {
+        env[key] = val;
+    }
+}
+
+function setTop(env: Env, key: string, val: Val) {
+    if (Above in env) {
+        setTop(env[Above], key, val);
+    } else {
+        env[key] = val;
+    }
+}
+
+function markdownOfEnv(env: Env): string {
+    if (Above in env) {
+        let out = markdownOfEnv(env[Local]);
+        if (Object.keys(env[Above]).length != 0) {
+            out += "\n~~          ~~\n";
+            out += markdownOfEnv(env[Above]);
+        }
+        return out;
+    } else {
+        return Object.entries(env).toSorted().map(([k, v]) =>
+            `- ${stringOfVal(v)} →${k}`
+        ).join("\n");
+    }
+}
+
 async function run(
-    { args, stack = [], env = {}, depth = 0, username }: {
+    {
+        args,
+        stack = [],
+        env = { [Local]: {}, [Above]: {} },
+        depth = 0,
+        username,
+    }: {
         args: string[];
         username: string;
         stack?: Val[];
-        env?: Record<string, Val>;
+        env?: Env;
         depth?: number;
     },
 ): Promise<void> {
@@ -206,11 +278,7 @@ async function run(
             stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
                 "\n",
             ) +
-            `\nenv:\n${
-                Object.entries(env).toSorted().map(([k, v]) =>
-                    `- ${stringOfVal(v)} →${k}`
-                ).join("\n")
-            }`;
+            `\nenv:\n${markdownOfEnv(env)}`;
     }
 
     if (depth > 1000) explode("recursion limit reached");
@@ -329,12 +397,14 @@ async function run(
     for (let step = 0; step < 1000 && i < args.length; step++) {
         const arg = args[i];
         const num = Number.parseInt(arg);
-        if (Number.isFinite(num)) {
+        const val = lookup(env, arg);
+        if (typeof val != "undefined") {
+            push(val);
+        } else if (Number.isFinite(num)) {
             push(num);
         } else if (arg.match(/^(->|→)/)) {
-            env[arg.replace(/->|→/, "")] = pop();
-        } else if (arg in env) {
-            push(env[arg]);
+            const name = arg.replace(/->|→/, "");
+            set(env, name, pop());
         } else if (arg in ops) {
             await ops[arg]();
         } else if (arg == "(") {
@@ -348,7 +418,7 @@ async function run(
                     await run({
                         args: subr,
                         stack,
-                        env: Object.setPrototypeOf({}, env),
+                        env: { [Local]: {}, [Above]: env },
                         depth: depth + 1,
                         username,
                     });
@@ -366,7 +436,7 @@ async function run(
                 depth: depth + 1,
             });
             // cache def
-            env[arg] = val;
+            setTop(env, arg, val);
             push(val);
         } else {
             const val = await getDef({
@@ -374,7 +444,7 @@ async function run(
                 def: arg,
                 depth: depth + 1,
             });
-            env[arg] = val;
+            setTop(env, arg, val);
             push(val);
         }
         i++;
@@ -384,7 +454,7 @@ async function run(
 
 const commands: Record<
     string,
-    (args: string[], username: string) => Promise<string>
+    (args: string[], username: string) => Promise<string | Buffer>
 > = {
     async clear() {
         await board.init({ force: true });
@@ -510,7 +580,12 @@ client.on("messageCreate", async (message) => {
             outputs.push(res);
         }
     }
-    await message.reply((outputs.at(-1) ?? "").slice(0, 2000));
+    const output = outputs.at(-1) ?? "";
+    if (typeof output == "string") {
+        await message.reply(output.slice(0, 2000));
+    } else {
+        await message.reply({ files: [{ attachment: output }] });
+    }
     console.log(
         `${message.author.id}: finished running ${cmds.length} commands`,
     );
