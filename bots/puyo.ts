@@ -171,10 +171,9 @@ function closingParenIndex(args: string[], start: number): number {
 }
 
 async function getDef(
-    { namespace, def, username, depth }: {
+    { namespace, def, depth }: {
         namespace: string;
         def: string;
-        username: string;
         depth: number;
     },
 ): Promise<Val> {
@@ -189,7 +188,7 @@ async function getDef(
     if (value == null) throw `${def} not found in ${namespace}`;
     // ha
     const stack: Val[] = [];
-    await run({ args: value, stack, username, depth: depth + 1 });
+    await run({ args: value, stack, username: namespace, depth: depth + 1 });
     return stack.pop() ?? 0;
 }
 
@@ -364,7 +363,6 @@ async function run(
             const val = await getDef({
                 namespace,
                 def,
-                username,
                 depth: depth + 1,
             });
             // cache def
@@ -374,7 +372,6 @@ async function run(
             const val = await getDef({
                 namespace: username,
                 def: arg,
-                username,
                 depth: depth + 1,
             });
             env[arg] = val;
