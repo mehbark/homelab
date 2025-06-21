@@ -147,7 +147,7 @@ const oob_dialogue = new TextDecoder().decode(
     await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
 ).split("\n");
 
-type Val = number | { thunk: () => Promise<void>; src: string[] };
+type Val = number | { run: (stack: Val[]) => Promise<void>; src: string[] };
 
 function stringOfVal(x: Val): string {
     if (typeof x == "number") return `\`${x.toString()}\``;
@@ -220,7 +220,7 @@ async function run(
         if (!popped || typeof popped != "number") return 0;
         return popped;
     };
-    const popf = (): () => Promise<void> => {
+    const popf = (): (stack: Val[]) => Promise<void> => {
         const popped = stack.pop();
         if (typeof popped == "undefined") return async () => {};
         if (typeof popped == "number") {
@@ -228,7 +228,7 @@ async function run(
                 push(popped);
             };
         }
-        return popped.thunk;
+        return popped.run;
     };
     const popb = (): boolean => popn() != 0;
     const pop = (): Val => stack.pop() ?? 0;
@@ -256,7 +256,7 @@ async function run(
             push(popn() == popn() ? 1 : 0);
         },
         async "!"() {
-            await popf()();
+            await popf()(stack);
         },
         async "get"() {
             const y = popn();
@@ -289,14 +289,14 @@ async function run(
             const then = popf();
             const bool = popb();
             if (bool) {
-                await then();
+                await then(stack);
             } else {
-                await els();
+                await els(stack);
             }
         },
         async "self"() {
             push({
-                thunk: async () => {
+                run: async (stack) => {
                     await run({
                         args,
                         stack,
@@ -344,7 +344,7 @@ async function run(
             }
             const subr = args.slice(i + 1, close);
             push({
-                thunk: async () => {
+                run: async (stack) => {
                     await run({
                         args: subr,
                         stack,
@@ -453,6 +453,26 @@ const commands: Record<
         await db.set(["run", "def", namespace, name], args);
         return `defined \`${name}\` in \`${namespace}\` (\`${namespace}/${name}\`)`;
     },
+    async definitions([name], username) {
+        if (!name) name = username;
+        const defs: [string, string[]][] = [];
+        for await (
+            const { key, value } of db.list<string[]>({
+                prefix: ["run", "def", name],
+            })
+        ) {
+            defs.push([key.slice(2).join("/"), value]);
+        }
+        return name + "'s defs\n" +
+            defs.toSorted().map(([k, v]) =>
+                `- ${
+                    stringOfVal({
+                        run: () => Promise.resolve(),
+                        src: v,
+                    })
+                } →${k}`
+            ).join("\n");
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
@@ -463,7 +483,7 @@ client.on("messageCreate", async (message) => {
     const is_admin = message.author.id == mehbark;
     const cmds = message.content.toLowerCase()
         .replaceAll(
-            /[()]/g,
+            /[()!]/g,
             (p) => ` ${p} `,
         )
         .replaceAll("`", "")
