@@ -248,7 +248,7 @@ function markdownOfEnv(env: Env): string {
     if (Above in env) {
         let out = markdownOfEnv(env[Local]);
         if (
-            Object.keys(env[Above]).length != 0 &&
+            Object.keys(env[Above]).length != 0 ||
             Object.keys(env[Local]).length != 0
         ) {
             out += "\n~~          ~~\n";
@@ -580,7 +580,10 @@ client.on("messageCreate", async (message) => {
             );
             outputs.push(res);
         } else {
-            const res = await commands.help([], message.author.username);
+            const res = await commands.run(
+                args.slice(1),
+                message.author.username,
+            );
             outputs.push(res);
         }
     }
