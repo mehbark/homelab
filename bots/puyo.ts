@@ -170,11 +170,37 @@ function closingParenIndex(args: string[], start: number): number {
     return -1;
 }
 
+async function getDef(
+    { namespace, def, username, depth }: {
+        namespace: string;
+        def: string;
+        username: string;
+        depth: number;
+    },
+): Promise<Val> {
+    if (depth > 1000) throw "recursion limit reached in `getDef`";
+
+    const { value } = await db.get<string[]>([
+        "run",
+        "def",
+        namespace,
+        def,
+    ]);
+    if (value == null) throw `${def} not found in ${namespace}`;
+    // ha
+    const stack: Val[] = [];
+    await run({ args: value, stack, username, depth: depth + 1 });
+    return stack.pop() ?? 0;
+}
+
 async function run(
-    args: string[],
-    stack: Val[] = [],
-    env: Record<string, Val> = {},
-    depth: number = 0,
+    { args, stack = [], env = {}, depth = 0, username }: {
+        args: string[];
+        username: string;
+        stack?: Val[];
+        env?: Record<string, Val>;
+        depth?: number;
+    },
 ): Promise<void> {
     function explode(msg = "i esploded") {
         throw msg + "\n" + "stack:\n" +
@@ -272,12 +298,13 @@ async function run(
         async "self"() {
             push({
                 thunk: async () => {
-                    await run(
+                    await run({
                         args,
                         stack,
                         env,
-                        depth + 1,
-                    );
+                        depth: depth + 1,
+                        username,
+                    });
                 },
                 src: args,
             });
@@ -319,12 +346,13 @@ async function run(
             const subr = args.slice(i + 1, close);
             push({
                 thunk: async () => {
-                    await run(
-                        subr,
+                    await run({
+                        args: subr,
                         stack,
-                        Object.setPrototypeOf({}, env),
-                        depth + 1,
-                    );
+                        env: Object.setPrototypeOf({}, env),
+                        depth: depth + 1,
+                        username,
+                    });
                 },
                 src: subr,
             });
@@ -333,29 +361,34 @@ async function run(
             throw "unmatched )";
         } else if (arg.includes("/")) {
             const [namespace, def] = arg.split("/", 2);
-            const { value } = await db.get<string[]>([
-                "run",
-                "def",
+            const val = await getDef({
                 namespace,
                 def,
-            ]);
-            if (value == null) throw `${def} not found in ${namespace}`;
-            // ha
-            const substack: Val[] = [];
-            await run(value, substack, {}, depth);
-            const val = substack.pop() ?? 0;
+                username,
+                depth: depth + 1,
+            });
             // cache def
             env[arg] = val;
             push(val);
         } else {
-            throw `idk what \`${arg}\` means`;
+            const val = await getDef({
+                namespace: username,
+                def: arg,
+                username,
+                depth: depth + 1,
+            });
+            env[arg] = val;
+            push(val);
         }
         i++;
     }
     return;
 }
 
-const commands: Record<string, (args: string[]) => Promise<string>> = {
+const commands: Record<
+    string,
+    (args: string[], username: string) => Promise<string>
+> = {
     async clear() {
         await board.init({ force: true });
         return "db cleared";
@@ -411,12 +444,12 @@ const commands: Record<string, (args: string[]) => Promise<string>> = {
                 "\n```",
         );
     },
-    async run(args) {
-        const err = await run(args).catch((e) => e);
+    async run(args, username) {
+        const err = await run({ args, username }).catch((e) => e);
         if (err) return err.toString();
         return board.status();
     },
-    async define([namespace, name, ...args]) {
+    async define([name, ...args], namespace) {
         if (!namespace || !name || args.length == 0) {
             return "i need `name program...`";
         }
@@ -446,18 +479,17 @@ client.on("messageCreate", async (message) => {
     const outputs = [];
     for (const args of cmds) {
         console.log(`| ${message.author.id}: ${JSON.stringify(args)}`);
-        if (args[0] == "define") {
-            const username = message.author.username;
-            const res = await commands.define([username, ...args.slice(1)]);
-            outputs.push(res);
-        } else if (
+        if (
             args[0] && args[0] in commands &&
             (is_admin || !admin_commands.includes(args[0]))
         ) {
-            const res = await commands[args[0]](args.slice(1));
+            const res = await commands[args[0]](
+                args.slice(1),
+                message.author.username,
+            );
             outputs.push(res);
         } else {
-            const res = await commands.help([]);
+            const res = await commands.help([], message.author.username);
             outputs.push(res);
         }
     }
