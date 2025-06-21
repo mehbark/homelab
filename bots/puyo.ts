@@ -157,7 +157,8 @@ const oob_dialogue = new TextDecoder().decode(
     await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
 ).split("\n");
 
-type Val = number | { run: (stack: Val[]) => Promise<void>; src: string[] };
+type Fun = (stack: Val[], depth: number) => Promise<void>;
+type Val = number | { run: Fun; src: string[] };
 
 function stringOfVal(x: Val): string {
     if (typeof x == "number") return `\`${x.toString()}\``;
@@ -246,10 +247,13 @@ function setTop(env: Env, key: string, val: Val) {
 function markdownOfEnv(env: Env): string {
     if (Above in env) {
         let out = markdownOfEnv(env[Local]);
-        if (Object.keys(env[Above]).length != 0) {
+        if (
+            Object.keys(env[Above]).length != 0 &&
+            Object.keys(env[Local]).length != 0
+        ) {
             out += "\n~~          ~~\n";
-            out += markdownOfEnv(env[Above]);
         }
+        out += markdownOfEnv(env[Above]);
         return out;
     } else {
         return Object.entries(env).toSorted().map(([k, v]) =>
@@ -263,14 +267,14 @@ async function run(
         args,
         stack = [],
         env = { [Local]: {}, [Above]: {} },
-        depth = 0,
+        depth,
         username,
     }: {
         args: string[];
         username: string;
         stack?: Val[];
         env?: Env;
-        depth?: number;
+        depth: number;
     },
 ): Promise<void> {
     function explode(msg = "i esploded") {
@@ -288,7 +292,7 @@ async function run(
         if (!popped || typeof popped != "number") return 0;
         return popped;
     };
-    const popf = (): (stack: Val[]) => Promise<void> => {
+    const popf = (): Fun => {
         const popped = stack.pop();
         if (typeof popped == "undefined") return async () => {};
         if (typeof popped == "number") {
@@ -324,7 +328,7 @@ async function run(
             push(popn() == popn() ? 1 : 0);
         },
         async "!"() {
-            await popf()(stack);
+            await popf()(stack, depth + 1);
         },
         async "get"() {
             const y = popn();
@@ -357,9 +361,9 @@ async function run(
             const then = popf();
             const bool = popb();
             if (bool) {
-                await then(stack);
+                await then(stack, depth + 1);
             } else {
-                await els(stack);
+                await els(stack, depth + 1);
             }
         },
         async "self"() {
@@ -414,12 +418,12 @@ async function run(
             }
             const subr = args.slice(i + 1, close);
             push({
-                run: async (stack) => {
+                run: async (stack, depth) => {
                     await run({
                         args: subr,
                         stack,
                         env: { [Local]: {}, [Above]: env },
-                        depth: depth + 1,
+                        depth,
                         username,
                     });
                 },
@@ -512,7 +516,7 @@ const commands: Record<
         );
     },
     async run(args, username) {
-        const err = await run({ args, username }).catch((e) => e);
+        const err = await run({ args, username, depth: 0 }).catch((e) => e);
         if (err) return err.toString();
         return board.status();
     },
