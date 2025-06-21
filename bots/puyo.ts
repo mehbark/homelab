@@ -581,7 +581,7 @@ client.on("messageCreate", async (message) => {
             outputs.push(res);
         } else {
             const res = await commands.run(
-                args.slice(1),
+                args,
                 message.author.username,
             );
             outputs.push(res);
