@@ -218,17 +218,14 @@ async function getDef(
     return stack.pop() ?? 0;
 }
 
-const Local = Symbol("local");
-const Above = Symbol("above");
-
-type Env = Record<string, Val> | { [Local]: Record<string, Val>; [Above]: Env };
+type Env = Record<string, Val> | [Record<string, Val>, Env];
 
 function lookup(env: Env, key: string): Val | undefined {
-    if (Local in env) {
-        if (key in env[Local]) {
-            return env[Local][key];
+    if (Array.isArray(env)) {
+        if (key in env[0]) {
+            return env[0][key];
         } else {
-            return lookup(env[Above], key);
+            return lookup(env[1], key);
         }
     } else {
         return env[key];
@@ -240,11 +237,11 @@ function has(env: Env, key: string): boolean {
 }
 
 function set(env: Env, key: string, val: Val) {
-    if (Above in env) {
-        if (has(env[Above], key)) {
-            set(env[Above], key, val);
+    if (Array.isArray(env)) {
+        if (has(env[1], key)) {
+            set(env[1], key, val);
         } else {
-            env[Local][key] = val;
+            env[0][key] = val;
         }
     } else {
         env[key] = val;
@@ -252,23 +249,23 @@ function set(env: Env, key: string, val: Val) {
 }
 
 function setTop(env: Env, key: string, val: Val) {
-    if (Above in env) {
-        setTop(env[Above], key, val);
+    if (Array.isArray(env)) {
+        setTop(env[1], key, val);
     } else {
         env[key] = val;
     }
 }
 
 function markdownOfEnv(env: Env): string {
-    if (Above in env) {
-        let out = markdownOfEnv(env[Local]);
+    if (Array.isArray(env)) {
+        let out = markdownOfEnv(env[0]);
         if (
-            Object.keys(env[Above]).length != 0 ||
-            Object.keys(env[Local]).length != 0
+            Object.keys(env[1]).length != 0 ||
+            Object.keys(env[0]).length != 0
         ) {
             out += "\n~~          ~~\n";
         }
-        out += markdownOfEnv(env[Above]);
+        out += markdownOfEnv(env[1]);
         return out;
     } else {
         return Object.entries(env).toSorted().map(([k, v]) =>
@@ -289,7 +286,7 @@ async function run(
     {
         args,
         stack = [],
-        env = { [Local]: {}, [Above]: {} },
+        env = {},
         depth,
         username,
     }: {
@@ -428,7 +425,7 @@ async function run(
                 throw "unmatched (";
             }
             const subr = args.slice(i + 1, close);
-            push({ src: subr, env: { [Local]: {}, [Above]: env }, username });
+            push({ src: subr, env: [{}, env], username });
             i = close;
         } else if (arg == ")") {
             throw "unmatched )";
