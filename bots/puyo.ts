@@ -157,23 +157,8 @@ const oob_dialogue = new TextDecoder().decode(
     await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
 ).split("\n");
 
-type Fun = { src: string[]; env: Env; username: string };
-type Val = number | Fun;
-
-// TODO: bro
-type FunFun = (stack: Val[], depth: number) => Promise<void>;
-function funFunOfFun(c: Fun): FunFun {
-    return (stack, depth) => {
-        if (depth > 1000) explode(stack, c.env, "recursion limit reached");
-        return run({
-            args: c.src,
-            env: c.env,
-            stack,
-            depth,
-            username: c.username,
-        });
-    };
-}
+type Fun = (stack: Val[], depth: number) => Promise<void>;
+type Val = number | { run: Fun; src: string[] };
 
 function stringOfVal(x: Val): string {
     if (typeof x == "number") return `\`${x.toString()}\``;
@@ -218,14 +203,17 @@ async function getDef(
     return stack.pop() ?? 0;
 }
 
-type Env = Record<string, Val> | [Record<string, Val>, Env];
+const Local = Symbol("local");
+const Above = Symbol("above");
+
+type Env = Record<string, Val> | { [Local]: Record<string, Val>; [Above]: Env };
 
 function lookup(env: Env, key: string): Val | undefined {
-    if (Array.isArray(env)) {
-        if (key in env[0]) {
-            return env[0][key];
+    if (Local in env) {
+        if (key in env[Local]) {
+            return env[Local][key];
         } else {
-            return lookup(env[1], key);
+            return lookup(env[Above], key);
         }
     } else {
         return env[key];
@@ -237,11 +225,11 @@ function has(env: Env, key: string): boolean {
 }
 
 function set(env: Env, key: string, val: Val) {
-    if (Array.isArray(env)) {
-        if (has(env[1], key)) {
-            set(env[1], key, val);
+    if (Above in env) {
+        if (has(env[Above], key)) {
+            set(env[Above], key, val);
         } else {
-            env[0][key] = val;
+            env[Local][key] = val;
         }
     } else {
         env[key] = val;
@@ -249,23 +237,23 @@ function set(env: Env, key: string, val: Val) {
 }
 
 function setTop(env: Env, key: string, val: Val) {
-    if (Array.isArray(env)) {
-        setTop(env[1], key, val);
+    if (Above in env) {
+        setTop(env[Above], key, val);
     } else {
         env[key] = val;
     }
 }
 
 function markdownOfEnv(env: Env): string {
-    if (Array.isArray(env)) {
-        let out = markdownOfEnv(env[0]);
+    if (Above in env) {
+        let out = markdownOfEnv(env[Local]);
         if (
-            Object.keys(env[1]).length != 0 ||
-            Object.keys(env[0]).length != 0
+            Object.keys(env[Above]).length != 0 ||
+            Object.keys(env[Local]).length != 0
         ) {
             out += "\n~~          ~~\n";
         }
-        out += markdownOfEnv(env[1]);
+        out += markdownOfEnv(env[Above]);
         return out;
     } else {
         return Object.entries(env).toSorted().map(([k, v]) =>
@@ -274,19 +262,11 @@ function markdownOfEnv(env: Env): string {
     }
 }
 
-function explode(stack: Val[], env: Env, msg = "i esploded") {
-    throw msg + "\n" + "stack:\n" +
-        stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
-            "\n",
-        ) +
-        `\nenv:\n${markdownOfEnv(env)}`;
-}
-
 async function run(
     {
         args,
         stack = [],
-        env = {},
+        env = { [Local]: {}, [Above]: {} },
         depth,
         username,
     }: {
@@ -297,14 +277,22 @@ async function run(
         depth: number;
     },
 ): Promise<void> {
-    if (depth > 1000) explode(stack, env, "recursion limit reached");
+    function explode(msg = "i esploded") {
+        throw msg + "\n" + "stack:\n" +
+            stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
+                "\n",
+            ) +
+            `\nenv:\n${markdownOfEnv(env)}`;
+    }
+
+    if (depth > 1000) explode("recursion limit reached");
     const push = (x: Val) => stack.push(x);
     const popn = (): number => {
         const popped = stack.pop();
         if (!popped || typeof popped != "number") return 0;
         return popped;
     };
-    const popf = (): FunFun => {
+    const popf = (): Fun => {
         const popped = stack.pop();
         if (typeof popped == "undefined") return async () => {};
         if (typeof popped == "number") {
@@ -312,7 +300,7 @@ async function run(
                 push(popped);
             };
         }
-        return funFunOfFun(popped);
+        return popped.run;
     };
     const popb = (): boolean => popn() != 0;
     const pop = (): Val => stack.pop() ?? 0;
@@ -320,7 +308,7 @@ async function run(
         if (typeof val == "number") {
             push(val);
         } else {
-            await funFunOfFun(val)(stack, depth + 1);
+            await val.run(stack, depth + 1);
         }
     };
 
@@ -386,10 +374,21 @@ async function run(
             }
         },
         async "self"() {
-            push({ src: args, env, username });
+            push({
+                run: async (stack) => {
+                    await run({
+                        args,
+                        stack,
+                        env,
+                        depth: depth + 1,
+                        username,
+                    });
+                },
+                src: args,
+            });
         },
         async "explode"() {
-            explode(stack, env);
+            explode();
         },
         async "floor"() {
             push(Math.floor(popn()));
@@ -425,7 +424,18 @@ async function run(
                 throw "unmatched (";
             }
             const subr = args.slice(i + 1, close);
-            push({ src: subr, env: [{}, env], username });
+            push({
+                run: async (stack, depth) => {
+                    await run({
+                        args: subr,
+                        stack,
+                        env: { [Local]: {}, [Above]: env },
+                        depth,
+                        username,
+                    });
+                },
+                src: subr,
+            });
             i = close;
         } else if (arg == ")") {
             throw "unmatched )";
@@ -536,7 +546,12 @@ const commands: Record<
         }
         return name + "'s defs\n" +
             defs.toSorted().map(([k, v]) =>
-                `- ${stringOfVal({ src: v, env: {}, username })} →${k}`
+                `- ${
+                    stringOfVal({
+                        run: () => Promise.resolve(),
+                        src: v,
+                    })
+                } →${k}`
             ).join("\n");
     },
 };
