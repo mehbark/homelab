@@ -157,8 +157,23 @@ const oob_dialogue = new TextDecoder().decode(
     await Deno.readFile("/home/mbk/bots/discord/dr-dump.txt"),
 ).split("\n");
 
-type Fun = (stack: Val[], depth: number) => Promise<void>;
-type Val = number | { run: Fun; src: string[] };
+type Fun = { src: string[]; env: Env; username: string };
+type Val = number | Fun;
+
+// TODO: bro
+type FunFun = (stack: Val[], depth: number) => Promise<void>;
+function funFunOfFun(c: Fun): FunFun {
+    return (stack, depth) => {
+        if (depth > 1000) explode(stack, c.env, "recursion limit reached");
+        return run({
+            args: c.src,
+            env: c.env,
+            stack,
+            depth,
+            username: c.username,
+        });
+    };
+}
 
 function stringOfVal(x: Val): string {
     if (typeof x == "number") return `\`${x.toString()}\``;
@@ -262,6 +277,14 @@ function markdownOfEnv(env: Env): string {
     }
 }
 
+function explode(stack: Val[], env: Env, msg = "i esploded") {
+    throw msg + "\n" + "stack:\n" +
+        stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
+            "\n",
+        ) +
+        `\nenv:\n${markdownOfEnv(env)}`;
+}
+
 async function run(
     {
         args,
@@ -277,22 +300,14 @@ async function run(
         depth: number;
     },
 ): Promise<void> {
-    function explode(msg = "i esploded") {
-        throw msg + "\n" + "stack:\n" +
-            stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
-                "\n",
-            ) +
-            `\nenv:\n${markdownOfEnv(env)}`;
-    }
-
-    if (depth > 1000) explode("recursion limit reached");
+    if (depth > 1000) explode(stack, env, "recursion limit reached");
     const push = (x: Val) => stack.push(x);
     const popn = (): number => {
         const popped = stack.pop();
         if (!popped || typeof popped != "number") return 0;
         return popped;
     };
-    const popf = (): Fun => {
+    const popf = (): FunFun => {
         const popped = stack.pop();
         if (typeof popped == "undefined") return async () => {};
         if (typeof popped == "number") {
@@ -300,7 +315,7 @@ async function run(
                 push(popped);
             };
         }
-        return popped.run;
+        return funFunOfFun(popped);
     };
     const popb = (): boolean => popn() != 0;
     const pop = (): Val => stack.pop() ?? 0;
@@ -308,7 +323,7 @@ async function run(
         if (typeof val == "number") {
             push(val);
         } else {
-            await val.run(stack, depth + 1);
+            await funFunOfFun(val)(stack, depth + 1);
         }
     };
 
@@ -374,21 +389,10 @@ async function run(
             }
         },
         async "self"() {
-            push({
-                run: async (stack) => {
-                    await run({
-                        args,
-                        stack,
-                        env,
-                        depth: depth + 1,
-                        username,
-                    });
-                },
-                src: args,
-            });
+            push({ src: args, env, username });
         },
         async "explode"() {
-            explode();
+            explode(stack, env);
         },
         async "floor"() {
             push(Math.floor(popn()));
@@ -424,18 +428,7 @@ async function run(
                 throw "unmatched (";
             }
             const subr = args.slice(i + 1, close);
-            push({
-                run: async (stack, depth) => {
-                    await run({
-                        args: subr,
-                        stack,
-                        env: { [Local]: {}, [Above]: env },
-                        depth,
-                        username,
-                    });
-                },
-                src: subr,
-            });
+            push({ src: subr, env: { [Local]: {}, [Above]: env }, username });
             i = close;
         } else if (arg == ")") {
             throw "unmatched )";
@@ -546,12 +539,7 @@ const commands: Record<
         }
         return name + "'s defs\n" +
             defs.toSorted().map(([k, v]) =>
-                `- ${
-                    stringOfVal({
-                        run: () => Promise.resolve(),
-                        src: v,
-                    })
-                } →${k}`
+                `- ${stringOfVal({ src: v, env: {}, username })} →${k}`
             ).join("\n");
     },
 };
