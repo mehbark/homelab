@@ -22,6 +22,7 @@ let basic-bot = name: src: { additionalArgs ? [] }:
              ${lib.escapeShellArg src} ${lib.escapeShellArg bot-config}
         '';
         Restart = "on-failure";
+        RuntimeMaxSec = "600s";
       };
     };
   };
