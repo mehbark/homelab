@@ -304,13 +304,6 @@ async function run(
     };
     const popb = (): boolean => popn() != 0;
     const pop = (): Val => stack.pop() ?? 0;
-    const push_var = async (val: Val) => {
-        if (typeof val == "number") {
-            push(val);
-        } else {
-            await val.run(stack, depth + 1);
-        }
-    };
 
     const ops: Record<string, () => Promise<void>> = {
         async "+"() {
@@ -410,7 +403,7 @@ async function run(
         const num = Number.parseInt(arg);
         const val = lookup(env, arg);
         if (typeof val != "undefined") {
-            await push_var(val);
+            push(val);
         } else if (Number.isFinite(num)) {
             push(num);
         } else if (arg.match(/^(->|→)/)) {
@@ -448,7 +441,7 @@ async function run(
             });
             // cache def
             setTop(env, arg, val);
-            push_var(val);
+            push(val);
         } else {
             const val = await getDef({
                 namespace: username,
@@ -456,7 +449,7 @@ async function run(
                 depth: depth + 1,
             });
             setTop(env, arg, val);
-            push_var(val);
+            push(val);
         }
         i++;
     }
