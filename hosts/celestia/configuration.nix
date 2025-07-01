@@ -1,13 +1,13 @@
 { pkgs, ... }@args:
 {
   imports = [
-    ./hardware-configuration.nix
-    ./firewall.nix
-    ./tailscale.nix
     ./caddy.nix
+    ./firewall.nix
+    ./hardware-configuration.nix
     ./nix.nix
-    ./openssh.nix
     ./ollama.nix
+    ./openssh.nix
+    ./tailscale.nix
     ../../bots/discord.nix
   ];
 
