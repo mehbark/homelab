@@ -14,6 +14,9 @@
     virtualHosts."cattenheimer.xyz:80".extraConfig = ''
       respond "meow"
     '';
+    virtualHosts."upload.cattenheimer.xyz:80".extraConfig = ''
+      reverse_proxy http://localhost:8080
+    '';
     virtualHosts."*.cattenheimer.xyz:80".extraConfig = ''
       handle_errors {
         rewrite * /{err.status_code}
