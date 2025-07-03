@@ -547,6 +547,28 @@ const commands: Record<
                 } →${k}`
             ).join("\n");
     },
+    async run2(src) {
+        const cmd = new Deno.Command("/run/current-system/sw/bin/puyo-lang", {
+            stdin: "piped",
+            stdout: "piped",
+            stderr: "piped",
+        });
+        const child = cmd.spawn();
+        const writer = child.stdin.getWriter();
+        await writer.write(new TextEncoder().encode(src.join(" ")));
+        await writer.close();
+        const { stdout, stderr } = await child.output();
+        const bbb = "```";
+        return `stdout:
+${bbb}ansi
+${new TextDecoder().decode(stdout) || "<empty>"}
+${bbb}
+stderr:
+${bbb}ansi
+${new TextDecoder().decode(stderr) || "<empty>"}
+${bbb}
+`;
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];

@@ -4,12 +4,14 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    puyo-lang.url = "git+https://git.pyrope.net/mbk/puyo-lang.git";
   };
 
   outputs = inputs @ {
     self,
     nixpkgs,
     flake-parts,
+    puyo-lang,
   }:
   flake-parts.lib.mkFlake {inherit inputs;} {
     systems = [
@@ -23,6 +25,9 @@
           system = "x86_64-linux";
           modules = [
             (import ./hosts/celestia/configuration.nix)
+            {
+              environment.systemPackages = [puyo-lang.packages.x86_64-linux.puyo-lang];
+            }
           ];
         };
 
