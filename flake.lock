@@ -92,11 +92,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1751504935,
-        "narHash": "sha256-iHP6oiWkuxaB4b/fIDPDwuZ6F39DzY6pOeqXjholh9M=",
+        "lastModified": 1751591082,
+        "narHash": "sha256-HOxm1oTRa6qlf0OjtKK90rEtWi3a3PKAFqYxmudDCZo=",
         "ref": "refs/heads/main",
-        "rev": "96334b0f4adb2e74ccaac3a60dd9d9477a04ba6c",
-        "revCount": 6,
+        "rev": "2d22cd689ed09577b95abfb1b6d0bc3920104753",
+        "revCount": 11,
         "type": "git",
         "url": "https://git.pyrope.net/mbk/puyo-lang.git"
       },

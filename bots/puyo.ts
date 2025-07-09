@@ -458,7 +458,10 @@ async function run(
 
 const commands: Record<
     string,
-    (args: string[], username: string) => Promise<string | Buffer>
+    (
+        args: string[],
+        more: { username: string; originalSrc: string },
+    ) => Promise<string | Buffer>
 > = {
     async clear() {
         await board.init({ force: true });
@@ -515,19 +518,19 @@ const commands: Record<
                 "\n```",
         );
     },
-    async run(args, username) {
+    async run(args, { username }) {
         const err = await run({ args, username, depth: 0 }).catch((e) => e);
         if (err) return err.toString();
         return board.status();
     },
-    async define([name, ...args], namespace) {
+    async define([name, ...args], { username: namespace }) {
         if (!namespace || !name || args.length == 0) {
             return "i need `name program...`";
         }
         await db.set(["run", "def", namespace, name], args);
         return `defined \`${name}\` in \`${namespace}\` (\`${namespace}/${name}\`)`;
     },
-    async definitions([name], username) {
+    async definitions([name], { username }) {
         if (!name) name = username;
         const defs: [string, string[]][] = [];
         for await (
@@ -547,15 +550,22 @@ const commands: Record<
                 } →${k}`
             ).join("\n");
     },
-    async run2(src) {
+    async run2(_, { originalSrc }) {
+        const src = originalSrc.replace("run2", "").replaceAll(
+            /<@\d+>|```/g,
+            "",
+        );
         const cmd = new Deno.Command("/run/current-system/sw/bin/puyo-lang", {
             stdin: "piped",
             stdout: "piped",
             stderr: "piped",
+            env: {
+                CLICOLOR_FORCE: "1",
+            },
         });
         const child = cmd.spawn();
         const writer = child.stdin.getWriter();
-        await writer.write(new TextEncoder().encode(src.join(" ")));
+        await writer.write(new TextEncoder().encode(src));
         await writer.close();
         const { stdout, stderr } = await child.output();
         const bbb = "```";
@@ -598,13 +608,19 @@ client.on("messageCreate", async (message) => {
         ) {
             const res = await commands[args[0]](
                 args.slice(1),
-                message.author.username,
+                {
+                    username: message.author.username,
+                    originalSrc: message.content,
+                },
             );
             outputs.push(res);
         } else {
             const res = await commands.run(
                 args,
-                message.author.username,
+                {
+                    username: message.author.username,
+                    originalSrc: message.content,
+                },
             );
             outputs.push(res);
         }
