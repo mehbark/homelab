@@ -4,7 +4,6 @@
     ./caddy.nix
     ./firewall.nix
     ./hardware-configuration.nix
-    ./nextcloud.nix
     ./nix.nix
     ./ollama.nix
     ./openssh.nix
