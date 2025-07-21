@@ -101,7 +101,7 @@ function is_mcai_like(str: string) {
     );
     const target = "mancomputersareincredible";
     return (
-        levenshteinEditDistance(normalized, target) < 7
+        levenshteinEditDistance(normalized, target) <= 10
     );
 }
 
