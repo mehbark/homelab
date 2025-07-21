@@ -3,6 +3,7 @@
   imports = [
     ./caddy.nix
     ./firewall.nix
+    ./forgejo.nix
     ./hardware-configuration.nix
     ./nix.nix
     ./ollama.nix

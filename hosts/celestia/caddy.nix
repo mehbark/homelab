@@ -29,6 +29,9 @@ let http-cat-error-handler = ''
 
       ${http-cat-error-handler}
     '';
+    virtualHosts."git.cattenheimer.xyz:80".extraConfig = ''
+      reverse_proxy http://localhost:3000
+    '';
     virtualHosts."*.cattenheimer.xyz:80".extraConfig = ''
       root * /srv/cattenheimer/{http.request.host.labels.2}
       encode zstd gzip
