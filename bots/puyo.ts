@@ -600,20 +600,23 @@ ${bbb}
     async spans(args, { userId }) {
         if (args.length > 1) return "give me a thing or give me no thing";
         const thing_of_interest: string | null = args[0];
-        const out = [];
+        const out: [string, number][] = [];
         const events = db.list<number>({ prefix: ["span", userId] });
         for await (const event of events) {
             const [type, thing] = event.key.slice(2);
             if (thing_of_interest && thing != thing_of_interest) continue;
             const time = event.value;
             out.push(
-                `- \`${String(thing)}\` ${String(type)}: ${
-                    markdownOfUnixTimestamp(time)
-                }`,
+                [
+                    `- \`${String(thing)}\` ${String(type)}: ${
+                        markdownOfUnixTimestamp(time)
+                    }`,
+                    time,
+                ],
             );
         }
-        out.reverse();
-        return out.join("\n");
+        out.sort((a, b) => b[1] - a[1]);
+        return out.map((x) => x[0]).join("\n");
     },
 };
 
