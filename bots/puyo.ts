@@ -456,11 +456,15 @@ async function run(
     return;
 }
 
+function markdownOfUnixTimestamp(time: number): string {
+    return `<t:${Math.floor(time)}:f>`;
+}
+
 const commands: Record<
     string,
     (
         args: string[],
-        more: { username: string; originalSrc: string },
+        more: { username: string; userId: string; originalSrc: string },
     ) => Promise<string | Buffer>
 > = {
     async clear() {
@@ -579,6 +583,38 @@ ${new TextDecoder().decode(stderr) || "<empty>"}
 ${bbb}
 `;
     },
+    async start(args, { userId }) {
+        if (args.length == 0) return "GIVE ME A THING";
+        const thing = args[0];
+        const time = Math.floor(new Date().getTime() / 1000);
+        await db.set(["span", userId, "start", thing], time);
+        return `\`${thing}\` started ${markdownOfUnixTimestamp(time)}`;
+    },
+    async stop(args, { userId }) {
+        if (args.length == 0) return "GIVE ME A THING";
+        const thing = args[0];
+        const time = Math.floor(new Date().getTime() / 1000);
+        await db.set(["span", userId, "stop", thing], time);
+        return `\`${thing}\` stopped ${markdownOfUnixTimestamp(time)}`;
+    },
+    async spans(args, { userId }) {
+        if (args.length > 1) return "give me a thing or give me no thing";
+        const thing_of_interest: string | null = args[0];
+        const out = [];
+        const events = db.list<number>({ prefix: ["span", userId] });
+        for await (const event of events) {
+            const [type, thing] = event.key.slice(2);
+            if (thing_of_interest && thing != thing_of_interest) continue;
+            const time = event.value;
+            out.push(
+                `- \`${String(thing)}\` ${String(type)}: ${
+                    markdownOfUnixTimestamp(time)
+                }`,
+            );
+        }
+        out.reverse();
+        return out.join("\n");
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
@@ -610,6 +646,7 @@ client.on("messageCreate", async (message) => {
                 args.slice(1),
                 {
                     username: message.author.username,
+                    userId: message.author.id,
                     originalSrc: message.content,
                 },
             );
@@ -619,6 +656,7 @@ client.on("messageCreate", async (message) => {
                 args,
                 {
                     username: message.author.username,
+                    userId: message.author.id,
                     originalSrc: message.content,
                 },
             );
