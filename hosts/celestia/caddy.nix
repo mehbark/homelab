@@ -7,7 +7,10 @@ let http-cat-error-handler = ''
       replace_status {err.status_code}
     }
   }
-  ''; in
+  '';
+  # we only use ports in string interpolation, so convert them all to strings here
+  ports = builtins.mapAttrs (_: port: builtins.toString port) (import ./local-ports.nix) ;
+in
 {
   services.caddy = {
     enable = true;
@@ -31,6 +34,9 @@ let http-cat-error-handler = ''
     '';
     virtualHosts."git.cattenheimer.xyz:80".extraConfig = ''
       reverse_proxy http://localhost:3000
+    '';
+    virtualHosts."puyo.cattenheimer.xyz:80".extraConfig = ''
+      reverse_proxy http://localhost:${ports.puyo}
     '';
     virtualHosts."*.cattenheimer.xyz:80".extraConfig = ''
       root * /srv/cattenheimer/{http.request.host.labels.2}

@@ -676,3 +676,5 @@ client.on("messageCreate", async (message) => {
         `${message.author.id}: finished running ${cmds.length} commands`,
     );
 });
+
+Deno.serve({ port: 61200 }, (req) => new Response("puyo"));
