@@ -45,6 +45,15 @@ const square_names = Object.fromEntries(
     Object.entries(square).map(([k, v]) => [v, k]),
 ) as Record<Square, string>;
 
+const square_colors: Record<Square, string> = {
+    [square.empty]: "#31373D",
+    [square.red]: "#DD2E44",
+    [square.green]: "#78B159",
+    [square.blue]: "#55ACEE",
+    [square.yellow]: "#FDCB58",
+    [square.purple]: "#AA8ED6",
+};
+
 function squareToEmoji(sq: Square): string {
     if (sq == square.empty) return ":black_large_square:";
     return `:${square_names[sq]}_square:`;
@@ -114,6 +123,20 @@ const board = {
             ).join(""),
             ...rows,
         ].join("\n");
+    },
+
+    async htmlStatus(): Promise<string> {
+        const rows = (await this.squares()).map((row) =>
+            `<tr>${
+                row.map((s) =>
+                    `<td style="background-color:${square_colors[s]}"></td>`
+                ).join("")
+            }</tr>`
+        );
+        // the whole table gets replaced, but polling means that spurious failures can be handled more gracefully
+        return `<table id="preview" hx-get="/" hx-swap="outerHTML" hx-trigger="every 1s"><tbody>${
+            rows.join("")
+        }</tbody></table>`;
     },
 
     async get({ x, y }: { x: number; y: number }): Promise<Square | undefined> {
@@ -677,4 +700,46 @@ client.on("messageCreate", async (message) => {
     );
 });
 
-Deno.serve({ port: 61200 }, (req) => new Response("puyo"));
+const home = (inner: string) => `
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
+    <title>puyo</title>
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            background-color: #1A1A1E;
+        }
+        #preview {
+            width: min(50vh,100%);
+            height: min(100vh, 200vw);
+            border-collapse: collapse;
+            aspect-ratio: 1/2;
+            margin-inline: auto;
+        }
+        #preview > tbody > tr > td {
+            border-radius: 8%;
+        }
+    </style>
+</head>
+<body>
+    ${inner}
+</body>
+</html>
+`;
+
+Deno.serve(
+    { port: 61200 },
+    async (req) => {
+        const is_htmx = req.headers.get("hx-request") == "true";
+        const table = await board.htmlStatus();
+        return new Response(is_htmx ? table : home(table), {
+            headers: { "content-type": "text/html" },
+        });
+    },
+);
