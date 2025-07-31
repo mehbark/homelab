@@ -610,25 +610,29 @@ ${bbb}
         if (args.length == 0) return "GIVE ME A THING";
         const thing = args[0];
         const time = Math.floor(new Date().getTime() / 1000);
-        await db.set(["span", userId, "start", thing], time);
+        // TODO: completely broken
+        await db.set(["span", userId, "start", time], thing);
         return `\`${thing}\` started ${markdownOfUnixTimestamp(time)}`;
     },
     async stop(args, { userId }) {
         if (args.length == 0) return "GIVE ME A THING";
         const thing = args[0];
         const time = Math.floor(new Date().getTime() / 1000);
-        await db.set(["span", userId, "stop", thing], time);
+        await db.set(["span", userId, "stop", time], thing);
         return `\`${thing}\` stopped ${markdownOfUnixTimestamp(time)}`;
     },
     async spans(args, { userId }) {
         if (args.length > 1) return "give me a thing or give me no thing";
         const thing_of_interest: string | null = args[0];
         const out: [string, number][] = [];
-        const events = db.list<number>({ prefix: ["span", userId] });
+        const events = db.list<string>({ prefix: ["span", userId] });
         for await (const event of events) {
-            const [type, thing] = event.key.slice(2);
+            const [type, time] = event.key.slice(2);
+            if (typeof time != "number") continue;
+
+            const thing = event.value;
+
             if (thing_of_interest && thing != thing_of_interest) continue;
-            const time = event.value;
             out.push(
                 [
                     `- \`${String(thing)}\` ${String(type)}: ${
