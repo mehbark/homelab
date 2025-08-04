@@ -645,6 +645,27 @@ ${bbb}
         out.sort((a, b) => b[1] - a[1]);
         return out.map((x) => x[0]).join("\n");
     },
+    async rescind(_args, { userId }) {
+        const events = await Array.fromAsync(
+            db.list<string>({ prefix: ["span", userId] }),
+        );
+
+        const most_recent = events.map((e) => e.key).filter((key) =>
+            key.length == 4 && typeof key[3] == "number"
+        ).toSorted((
+            a,
+            b,
+        ) => (a[3] as number) - (b[3] as number)).at(-1);
+
+        if (most_recent) {
+            await db.delete(most_recent);
+            return `rescindified the ${most_recent[2] as string} event at ${
+                markdownOfUnixTimestamp(most_recent[3] as number)
+            }`;
+        } else {
+            return "yeah idk what you're talking about there's nothing to rescind mkay";
+        }
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
