@@ -759,8 +759,9 @@ const home = (inner: string) => `
 `;
 
 const offsets: [number, ...string[]][] = [
-    [-4, "mehbark"],
+    [-4, "mehbark", "multioculate"],
     [+2, "mocha"],
+    [+12, "umbreonzdreamz"],
 ];
 
 const colors: [string, string][] = [
@@ -820,7 +821,7 @@ const time_page = `
             width: min(50ch, 90vw);
         }
 
-        #times > li {
+        .time {
             padding-block: 0.5rem;
             padding-inline: 0.5rem;
         }
@@ -832,7 +833,15 @@ const time_page = `
         }
 
         .friends {
-            display: block;
+            list-style: none;
+        }
+
+        .friend {
+            display: inline;
+        }
+
+        :target {
+            outline: 5px solid white;
         }
     </style>
     <script>
@@ -844,7 +853,7 @@ const time_page = `
         const date_string_for = (offset) => new Intl.DateTimeFormat("en-US", {
             dateStyle: "full",
             timeStyle: "short",
-            timeZone: (offset < 0 ? "-" : "+") + Math.abs(offset).toString().padStart(2, "0") + ":00",
+            timeZone: (offset >= 0 ? "+" : "-") + Math.abs(offset).toString().padStart(2, "0") + ":00",
         }).format(now);
 
         function updateTime(time) {
@@ -872,11 +881,41 @@ const time_page = `
             for (const [offset, ...friends] of offsets) {
                 const time = document.createElement("li");
                 time.dataset.offset = offset;
+                time.setAttribute("id", "utc" + (offset >= 0 ? "+" : "") + offset.toString());
+                time.classList.add("time");
 
-                const friends_span = document.createElement("span");
-                friends_span.innerText = friends.join(", ");
-                friends_span.classList.add("friends");
-                time.appendChild(friends_span);
+                const friends_list = document.createElement("ul");
+                friends_list.classList.add("friends");
+
+                for (let i = 0; i < friends.length; i++) {
+                    const friend = friends[i];
+                    const last = i + 1 >= friends.length;
+                    const second_to_last = i + 2 == friends.length;
+
+                    const friend_li = document.createElement("li");
+                    friend_li.classList.add("friend");
+                    friend_li.innerText = friend;
+                    friend_li.setAttribute("id", friend);
+
+                    friends_list.appendChild(friend_li);
+
+                    if (!last) {
+                        const sep = document.createElement("span");
+                        sep.setAttribute("role", "presentation");
+
+                        if (friends.length == 2) {
+                            sep.innerText = " and ";
+                        } else if (second_to_last) {
+                            sep.innerText = ", and ";
+                        } else {
+                            sep.innerText = ", ";
+                        }
+
+                        friends_list.appendChild(sep);
+                    }
+                }
+
+                time.appendChild(friends_list);
 
                 time.appendChild(document.createElement("time"));
 
@@ -887,7 +926,7 @@ const time_page = `
 
             setInterval(() => {
                 now = new Date();
-                times.querySelectorAll("li").forEach(updateTime);
+                times.querySelectorAll("li.time").forEach(updateTime);
             }, 1000);
         });
     </script>
