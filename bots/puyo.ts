@@ -758,10 +758,111 @@ const home = (inner: string) => `
 </html>
 `;
 
+const offsets: [number, ...string[]][] = [
+    [-4, "mehbark"],
+    [+2, "mocha"],
+];
+
+const time_page = `
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>m,cai time</title>
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            background-color: #00091a;
+            color: #c4a6d2;
+        }
+
+        #times {
+            list-style-type: none;
+            width: fit-content;
+            margin-inline: auto;
+            text-align: right;
+            padding-inline: 1rem;
+        }
+
+        #times > li {
+            margin-block-end: 1rem;
+        }
+
+        time {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .friends {
+            display: block;
+        }
+    </style>
+    <script>
+        const offsets = ${JSON.stringify(offsets)};
+
+        let now = new Date();
+
+        const date_string_for = (offset) => new Intl.DateTimeFormat("en-US", {
+            dateStyle: "full",
+            timeStyle: "short",
+            timeZone: (offset < 0 ? "-" : "+") + Math.abs(offset).toString().padStart(2, "0") + ":00",
+        }).format(now);
+
+        window.addEventListener("DOMContentLoaded", () => {
+            now = new Date();
+
+            const times = document.getElementById("times");
+
+            for (const [offset, ...friends] of offsets) {
+                const time = document.createElement("li");
+                time.dataset.offset = offset;
+
+                const friends_span = document.createElement("span");
+                friends_span.innerText = friends.join(", ");
+                friends_span.classList.add("friends");
+                time.appendChild(friends_span);
+
+                const datetime = document.createElement("time");
+                datetime.setAttribute("datetime", now.toISOString());
+                datetime.innerText = date_string_for(offset);
+                time.appendChild(datetime);
+
+                times.appendChild(time);
+            }
+
+            setInterval(() => {
+                now = new Date();
+                times.querySelectorAll("li").forEach(time => {
+                    const datetime = time.querySelector("time");
+                    datetime.setAttribute("datetime", now.toISOString());
+                    datetime.innerText = date_string_for(time.dataset.offset);
+                });
+            }, 1000);
+        });
+    </script>
+</head>
+<body>
+<ul id="times">
+</ul>
+</body>
+</html>
+`;
+
 Deno.serve(
     { port: 61200 },
     async (req) => {
         const is_htmx = req.headers.get("hx-request") == "true";
+        const url = new URL(req.url);
+
+        if (url.pathname == "/time") {
+            return new Response(time_page, {
+                headers: { "content-type": "text/html" },
+            });
+        }
+
         const table = await board.htmlStatus();
         return new Response(is_htmx ? table : home(table), {
             headers: { "content-type": "text/html" },
