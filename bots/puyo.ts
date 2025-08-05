@@ -763,6 +763,39 @@ const offsets: [number, ...string[]][] = [
     [+2, "mocha"],
 ];
 
+const colors: [string, string][] = [
+    // midnight
+    ["white", "#000000"],
+    ["white", "#030303"],
+    ["white", "#060606"],
+    ["white", "#090909"],
+    ["white", "#0c0c0c"],
+    ["white", "#0f0f0f"],
+    // 6am
+    ["white", "#131322"],
+    ["white", "#1d1d39"],
+    ["white", "#445168"],
+    // 9am
+    ["black", "#7998a4"],
+    ["black", "#a1d9ee"],
+    ["black", "#9ee4ff"],
+    // noon
+    ["black", "#8efdfd"],
+    ["black", "#8ef7f7"],
+    ["black", "#8ce8e8"],
+    ["black", "#8de1e1"],
+    ["black", "#8bd9d9"],
+    ["black", "#8cd5d5"],
+    // (implausibly long) sunset start
+    ["black", "#C6DF9A"],
+    ["black", "#ECCC5B"],
+    ["white", "#BE5013"],
+    // bright night
+    ["white", "#1f1f25"],
+    ["white", "#0f0f0e"],
+    ["white", "#060609"],
+];
+
 const time_page = `
 <!doctype html>
 <html lang="en">
@@ -781,19 +814,21 @@ const time_page = `
 
         #times {
             list-style-type: none;
-            width: fit-content;
             margin-inline: auto;
             text-align: right;
             padding-inline: 1rem;
+            width: min(50ch, 90vw);
         }
 
         #times > li {
-            margin-block-end: 1rem;
+            padding-block: 0.5rem;
+            padding-inline: 0.5rem;
         }
 
         time {
             font-family: monospace;
             font-weight: bold;
+            font-size: 1rem;
         }
 
         .friends {
@@ -802,6 +837,7 @@ const time_page = `
     </style>
     <script>
         const offsets = ${JSON.stringify(offsets)};
+        const colors = ${JSON.stringify(colors)};
 
         let now = new Date();
 
@@ -810,6 +846,23 @@ const time_page = `
             timeStyle: "short",
             timeZone: (offset < 0 ? "-" : "+") + Math.abs(offset).toString().padStart(2, "0") + ":00",
         }).format(now);
+
+        function updateTime(time) {
+            const utc_hour = now.getUTCHours();
+            const datetime = time.querySelector("time");
+            const offset = +time.dataset.offset;
+
+            datetime.setAttribute("datetime", now.toISOString());
+            datetime.innerText = date_string_for(offset);
+
+            let hour = (utc_hour + offset) % 24;
+            if (hour < 0) hour += 24;
+
+            const [fg, bg] = colors[hour];
+
+            time.style.color = fg;
+            time.style.backgroundColor = bg;
+        }
 
         window.addEventListener("DOMContentLoaded", () => {
             now = new Date();
@@ -825,21 +878,16 @@ const time_page = `
                 friends_span.classList.add("friends");
                 time.appendChild(friends_span);
 
-                const datetime = document.createElement("time");
-                datetime.setAttribute("datetime", now.toISOString());
-                datetime.innerText = date_string_for(offset);
-                time.appendChild(datetime);
+                time.appendChild(document.createElement("time"));
+
+                updateTime(time);
 
                 times.appendChild(time);
             }
 
             setInterval(() => {
                 now = new Date();
-                times.querySelectorAll("li").forEach(time => {
-                    const datetime = time.querySelector("time");
-                    datetime.setAttribute("datetime", now.toISOString());
-                    datetime.innerText = date_string_for(time.dataset.offset);
-                });
+                times.querySelectorAll("li").forEach(updateTime);
             }, 1000);
         });
     </script>
