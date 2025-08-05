@@ -824,6 +824,7 @@ const time_page = `
         .time {
             padding-block: 0.5rem;
             padding-inline: 0.5rem;
+            transition: color 1s, background-color 1s;
         }
 
         time {
@@ -924,10 +925,11 @@ const time_page = `
                 times.appendChild(time);
             }
 
-            setInterval(() => {
+            const update = () => {
                 now = new Date();
                 times.querySelectorAll("li.time").forEach(updateTime);
-            }, 1000);
+            };
+            console.log(setInterval(update, 1000));
         });
     </script>
 </head>
