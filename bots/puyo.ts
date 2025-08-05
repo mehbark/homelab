@@ -797,7 +797,7 @@ const colors: [string, string][] = [
     ["white", "#060609"],
 ];
 
-const time_page = `
+const time_page = ({ update_bg }: { update_bg: boolean }) => `
 <!doctype html>
 <html lang="en">
 <head>
@@ -811,30 +811,47 @@ const time_page = `
             margin: 0;
             background-color: #00091a;
             color: #c4a6d2;
+            transition: color 1s, background-color 1s;
         }
 
         #times {
             list-style-type: none;
-            margin-inline: auto;
             text-align: right;
-            padding-inline: 1rem;
-            width: min(50ch, 90vw);
+            width: min(50ch, 100%);
+            margin-block: 0;
+            margin-inline: auto;
+            padding: 0;
         }
 
         .time {
             padding-block: 0.5rem;
             padding-inline: 0.5rem;
             transition: color 1s, background-color 1s;
+            display: grid;
+            grid-template:
+                "offset friends"
+                "offset time" / 3ch auto;
+        }
+
+        .offset {
+            grid-area: offset;
+            margin: 0;
+            align-self: center;
+            font-family: monospace;
+            font-size: 11pt;
+            text-align: left;
         }
 
         time {
             font-family: monospace;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 11pt;
+            grid-area: time;
         }
 
         .friends {
             list-style: none;
+            grid-area: friends;
         }
 
         .friend {
@@ -850,6 +867,8 @@ const time_page = `
         const colors = ${JSON.stringify(colors)};
 
         let now = new Date();
+
+        let update_bg = ${update_bg};
 
         const date_string_for = (offset) => new Intl.DateTimeFormat("en-US", {
             dateStyle: "full",
@@ -884,6 +903,11 @@ const time_page = `
                 time.dataset.offset = offset;
                 time.setAttribute("id", "utc" + (offset >= 0 ? "+" : "") + offset.toString());
                 time.classList.add("time");
+
+                const offset_elem = document.createElement("p");
+                offset_elem.classList.add("offset");
+                offset_elem.innerText = (offset >= 0 ? "+" : "") + offset.toString();
+                time.appendChild(offset_elem);
 
                 const friends_list = document.createElement("ul");
                 friends_list.classList.add("friends");
@@ -928,7 +952,9 @@ const time_page = `
             const update = () => {
                 now = new Date();
                 times.querySelectorAll("li.time").forEach(updateTime);
+                if (update_bg) document.body.style.backgroundColor = colors[now.getHours()][1];
             };
+            update();
             console.log(setInterval(update, 1000));
         });
     </script>
@@ -947,9 +973,14 @@ Deno.serve(
         const url = new URL(req.url);
 
         if (url.pathname == "/time") {
-            return new Response(time_page, {
-                headers: { "content-type": "text/html" },
-            });
+            return new Response(
+                time_page({
+                    update_bg: url.searchParams.get("update-bg") !== null,
+                }),
+                {
+                    headers: { "content-type": "text/html" },
+                },
+            );
         }
 
         const table = await board.htmlStatus();
