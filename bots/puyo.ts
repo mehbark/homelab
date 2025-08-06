@@ -678,10 +678,15 @@ ${bbb}
                         return "-12..=14 plz";
                     }
                     await db.set(["time", "offset", userId], offset);
-                    await db.set(
-                        ["time", "username", userId],
-                        username.toLowerCase(),
-                    );
+                    if (
+                        (await db.get(["time", "username", userId])).value ===
+                            null
+                    ) {
+                        await db.set(
+                            ["time", "username", userId],
+                            username.toLowerCase(),
+                        );
+                    }
                     return `alright it's \`${offset_str(offset)}\` now`;
                 } else {
                     const { value } = await db.get<number>([
@@ -720,6 +725,13 @@ ${bbb}
                         return `your time username is \`${value}\``;
                     }
                 }
+            },
+            async delete() {
+                await Promise.all([
+                    db.delete(["time", "offset", userId]),
+                    db.delete(["time", "username", userId]),
+                ]);
+                return "deleted";
             },
         };
 
@@ -824,13 +836,40 @@ const home = (inner: string) => `
 </html>
 `;
 
-const offsets: [number, ...string[]][] = [
-    [-4, "coldcalzone", "mehbark", "multioculate"],
-    [+2, "mocha"],
-    [+12, "umbreonzdreamz"],
-];
+async function offsets(): Promise<[number, ...string[]][]> {
+    const entries = await db.list<number>({ prefix: ["time", "offset"] });
 
-const all_friends = offsets.flatMap(([_offset, ...friends]) => friends);
+    const out = new Map<number, string[]>();
+
+    for await (const { key, value: offset } of entries) {
+        const userId = key[2] as string;
+        if (!out.has(offset)) out.set(offset, []);
+        out.get(offset)!.push(userId);
+    }
+
+    return await Promise.all(
+        out.entries().map(async (
+            [offset, userIds],
+        ): Promise<[number, ...string[]]> => [
+            offset,
+            ...await Promise.all(userIds.map(
+                async (
+                    id,
+                ) => (await db.get<string>(["time", "username", id])).value ??
+                    "UNKNOWN",
+            )),
+        ]),
+    );
+}
+
+// const offsets(): [number, ...string[]][] = [
+//     [-4, "coldcalzone", "mehbark", "multioculate"],
+//     [+2, "mocha"],
+//     [+12, "umbreonzdreamz"],
+// ];
+
+const all_friends = async () =>
+    (await offsets()).flatMap(([_offset, ...friends]) => friends);
 
 const colors: [string, string][] = [
     // midnight
@@ -905,7 +944,7 @@ const offset_info = (offset: number): { time: string; color: string } => {
     return { time, color };
 };
 
-const time_page = (
+const time_page = async (
     { update_bg, friends }: {
         update_bg: boolean;
         friends: string[];
@@ -914,10 +953,13 @@ const time_page = (
     let description = "local times of various m,caiers";
     let color = "#00091a";
 
-    if (friends.length == 0) friends = all_friends;
+    const offsets_ = await offsets();
+    const all_friends_ = await all_friends();
 
-    if (friends.every((f) => all_friends.includes(f))) {
-        const groups = offsets
+    if (friends.length == 0) friends = all_friends_;
+
+    if (friends.every((f) => all_friends_.includes(f))) {
+        const groups = offsets_
             .map(([offset, ...fs]): [number, string[]] => [
                 offset,
                 fs.filter((f) => friends.includes(f)),
@@ -1008,7 +1050,7 @@ const time_page = (
         }
     </style>
     <script>
-        const offsets = ${JSON.stringify(offsets)};
+        const offsets = ${JSON.stringify(offsets_)};
         const colors = ${JSON.stringify(colors)};
 
         let now = new Date();
@@ -1122,7 +1164,7 @@ Deno.serve(
             const update_bg = url.searchParams.get("update-bg") !== null;
             const friends = url.searchParams.getAll("f");
             return new Response(
-                time_page({ update_bg, friends }),
+                await time_page({ update_bg, friends }),
                 {
                     headers: { "content-type": "text/html" },
                 },
