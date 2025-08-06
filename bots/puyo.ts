@@ -764,6 +764,8 @@ const offsets: [number, ...string[]][] = [
     [+12, "umbreonzdreamz"],
 ];
 
+const all_friends = offsets.flatMap(([_offset, ...friends]) => friends);
+
 const colors: [string, string][] = [
     // midnight
     ["white", "#000000"],
@@ -797,38 +799,74 @@ const colors: [string, string][] = [
     ["white", "#060609"],
 ];
 
+const humanify_list = (xs: string[], { sep = "," } = {}): string => {
+    let out = "";
+    for (let i = 0; i < xs.length; i++) {
+        const x = xs[i];
+        const last = i + 1 >= xs.length;
+        const second_to_last = i + 2 == xs.length;
+
+        out += x;
+        if (second_to_last) {
+            if (xs.length > 2) out += sep;
+            out += " and ";
+        } else if (!last) {
+            out += sep + " ";
+        }
+    }
+    return out;
+};
+
+const offset_info = (offset: number): { time: string; color: string } => {
+    const now = new Date();
+
+    const time = new Intl.DateTimeFormat("en-US", {
+        timeStyle: "short",
+        timeZone: (offset >= 0 ? "+" : "-") +
+            Math.abs(offset).toString().padStart(2, "0") + ":00",
+    }).format(now);
+
+    const utc_hour = now.getUTCHours();
+    let hour = (utc_hour + offset) % 24;
+    if (hour < 0) hour += 24;
+
+    const color = colors[hour][1];
+
+    return { time, color };
+};
+
 const time_page = (
-    { update_bg, friend: friend_ }: {
+    { update_bg, friends }: {
         update_bg: boolean;
-        friend: string | null;
+        friends: string[];
     },
 ) => {
-    let description = "the local times of various m,caiers";
+    let description = "local times of various m,caiers";
     let color = "#00091a";
 
-    if (friend_) {
-        const friend = friend_.toLowerCase();
-        const entry = offsets.find(([_, ...friends]) =>
-            friends.includes(friend)
-        );
-        if (entry) {
-            const now = new Date();
-            const [offset, ..._] = entry;
+    if (friends.length == 0) friends = all_friends;
 
-            const time = new Intl.DateTimeFormat("en-US", {
-                timeStyle: "short",
-                timeZone: (offset >= 0 ? "+" : "-") +
-                    Math.abs(offset).toString().padStart(2, "0") + ":00",
-            }).format(now);
+    if (friends.every((f) => all_friends.includes(f))) {
+        const groups = offsets
+            .map(([offset, ...fs]): [number, string[]] => [
+                offset,
+                fs.filter((f) => friends.includes(f)),
+            ])
+            .filter(([_offset, fs]) => fs.length > 0);
 
-            description = `it is ${time} for ${friend}`;
+        const strs = groups.map(([offset, friends]) => {
+            const { time, color: offset_color } = offset_info(offset);
 
-            const utc_hour = now.getUTCHours();
-            let hour = (utc_hour + offset) % 24;
-            if (hour < 0) hour += 24;
+            if (groups.length == 1) color = offset_color;
 
-            color = colors[hour][1];
-        }
+            return `${time} for ${humanify_list(friends)}`;
+        });
+
+        const sep = strs.some((s) => s.includes(",")) ? ";" : ",";
+
+        description = `it is ${humanify_list(strs, { sep })}`;
+    } else {
+        description = "whoever made this link is very silly :3";
     }
 
     return `<!doctype html>
@@ -1012,9 +1050,9 @@ Deno.serve(
 
         if (url.pathname == "/time") {
             const update_bg = url.searchParams.get("update-bg") !== null;
-            const friend = url.searchParams.get("f");
+            const friends = url.searchParams.getAll("f");
             return new Response(
-                time_page({ update_bg, friend }),
+                time_page({ update_bg, friends }),
                 {
                     headers: { "content-type": "text/html" },
                 },
