@@ -759,7 +759,7 @@ const home = (inner: string) => `
 `;
 
 const offsets: [number, ...string[]][] = [
-    [-4, "mehbark", "multioculate"],
+    [-4, "coldcalzone", "mehbark", "multioculate"],
     [+2, "mocha"],
     [+12, "umbreonzdreamz"],
 ];
@@ -797,13 +797,50 @@ const colors: [string, string][] = [
     ["white", "#060609"],
 ];
 
-const time_page = ({ update_bg }: { update_bg: boolean }) => `
-<!doctype html>
+const time_page = (
+    { update_bg, friend: friend_ }: {
+        update_bg: boolean;
+        friend: string | null;
+    },
+) => {
+    let description = "the local times of various m,caiers";
+    let color = "#00091a";
+
+    if (friend_) {
+        const friend = friend_.toLowerCase();
+        const entry = offsets.find(([_, ...friends]) =>
+            friends.includes(friend)
+        );
+        if (entry) {
+            const now = new Date();
+            const [offset, ..._] = entry;
+
+            const time = new Intl.DateTimeFormat("en-US", {
+                timeStyle: "short",
+                timeZone: (offset >= 0 ? "+" : "-") +
+                    Math.abs(offset).toString().padStart(2, "0") + ":00",
+            }).format(now);
+
+            description = `it is ${time} for ${friend}`;
+
+            const utc_hour = now.getUTCHours();
+            let hour = (utc_hour + offset) % 24;
+            if (hour < 0) hour += 24;
+
+            color = colors[hour][1];
+        }
+    }
+
+    return `<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>m,cai time</title>
+    <meta property="og:title" content="m,cai time">
+    <meta name="theme-color" content="${color}" data-react-helmet="true">
+    <meta name="description" content="${description}">
+    <meta name="og:description" content="${description}">
     <style>
         body {
             width: 100%;
@@ -965,6 +1002,7 @@ const time_page = ({ update_bg }: { update_bg: boolean }) => `
 </body>
 </html>
 `;
+};
 
 Deno.serve(
     { port: 61200 },
@@ -973,10 +1011,10 @@ Deno.serve(
         const url = new URL(req.url);
 
         if (url.pathname == "/time") {
+            const update_bg = url.searchParams.get("update-bg") !== null;
+            const friend = url.searchParams.get("f");
             return new Response(
-                time_page({
-                    update_bg: url.searchParams.get("update-bg") !== null,
-                }),
+                time_page({ update_bg, friend }),
                 {
                     headers: { "content-type": "text/html" },
                 },
