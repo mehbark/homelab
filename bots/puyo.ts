@@ -847,26 +847,22 @@ async function offsets(): Promise<[number, ...string[]][]> {
         out.get(offset)!.push(userId);
     }
 
-    return await Promise.all(
+    const get_username = async (id: string) =>
+        (await db.get<string>(["time", "username", id])).value ?? "UNKNOWN";
+
+    const offsets = await Promise.all(
         out.entries().map(async (
             [offset, userIds],
         ): Promise<[number, ...string[]]> => [
             offset,
-            ...await Promise.all(userIds.map(
-                async (
-                    id,
-                ) => (await db.get<string>(["time", "username", id])).value ??
-                    "UNKNOWN",
-            )),
+            ...(await Promise.all(userIds.map(get_username))).toSorted(),
         ]),
     );
-}
 
-// const offsets(): [number, ...string[]][] = [
-//     [-4, "coldcalzone", "mehbark", "multioculate"],
-//     [+2, "mocha"],
-//     [+12, "umbreonzdreamz"],
-// ];
+    offsets.sort(([offset_a], [offset_b]) => offset_a - offset_b);
+
+    return offsets;
+}
 
 const all_friends = async () =>
     (await offsets()).flatMap(([_offset, ...friends]) => friends);
