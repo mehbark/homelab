@@ -666,6 +666,72 @@ ${bbb}
             return "yeah idk what you're talking about there's nothing to rescind mkay";
         }
     },
+    async time(args, { userId, username }) {
+        const subcommands: Record<
+            string,
+            (val: string | undefined) => Promise<string>
+        > = {
+            async offset(val) {
+                if (val) {
+                    const offset = Number.parseInt(val);
+                    if (Number.isNaN(offset) || offset < -12 || offset > 14) {
+                        return "-12..=14 plz";
+                    }
+                    await db.set(["time", "offset", userId], offset);
+                    await db.set(
+                        ["time", "username", userId],
+                        username.toLowerCase(),
+                    );
+                    return `alright it's \`${offset_str(offset)}\` now`;
+                } else {
+                    const { value } = await db.get<number>([
+                        "time",
+                        "offset",
+                        userId,
+                    ]);
+                    if (value === null) {
+                        return "I DON'T KNOW";
+                    } else {
+                        return `yeah sure it's uhhhhh \`${offset_str(value)}\``;
+                    }
+                }
+            },
+            async username(val) {
+                if (val) {
+                    if (
+                        val.match(
+                            /times|time|offset|friends|friend|utc|[`"'&,;]/,
+                        )
+                    ) {
+                        return "bad. sorry";
+                    } else {
+                        await db.set(["time", "username", userId], val);
+                        return `alright it's \`${val}\` now`;
+                    }
+                } else {
+                    const { value } = await db.get<string>([
+                        "time",
+                        "username",
+                        userId,
+                    ]);
+                    if (value === null) {
+                        return "I DON'T KNOW";
+                    } else {
+                        return `your time username is \`${value}\``;
+                    }
+                }
+            },
+        };
+
+        if (args.length > 2 || !Object.keys(subcommands).includes(args[0])) {
+            return `usage: \`time (${
+                Object.keys(subcommands).toSorted().join("|")
+            }) [val]\``;
+        }
+
+        const [subcommand, val] = args;
+        return await subcommands[subcommand](val);
+    },
 };
 
 const admin_commands: string[] = ["clear", "dump", "die"];
@@ -817,13 +883,17 @@ const humanify_list = (xs: string[], { sep = "," } = {}): string => {
     return out;
 };
 
+const offset_str = (offset: number): string =>
+    `${(offset >= 0 ? "+" : "-")}${
+        Math.abs(offset).toString().padStart(2, "0")
+    }:00`;
+
 const offset_info = (offset: number): { time: string; color: string } => {
     const now = new Date();
 
     const time = new Intl.DateTimeFormat("en-US", {
         timeStyle: "short",
-        timeZone: (offset >= 0 ? "+" : "-") +
-            Math.abs(offset).toString().padStart(2, "0") + ":00",
+        timeZone: offset_str(offset),
     }).format(now);
 
     const utc_hour = now.getUTCHours();
