@@ -487,7 +487,12 @@ const commands: Record<
     string,
     (
         args: string[],
-        more: { username: string; userId: string; originalSrc: string },
+        more: {
+            username: string;
+            userId: string;
+            originalSrc: string;
+            isAdmin: boolean;
+        },
     ) => Promise<string | Buffer>
 > = {
     async clear() {
@@ -666,7 +671,7 @@ ${bbb}
             return "yeah idk what you're talking about there's nothing to rescind mkay";
         }
     },
-    async time(args, { userId, username }) {
+    async time(args, { userId, username, isAdmin }) {
         const subcommands: Record<
             string,
             (val: string | undefined) => Promise<string>
@@ -733,9 +738,20 @@ ${bbb}
                 ]);
                 return "deleted";
             },
+            async "admin-set"() {
+                if (!isAdmin) return "you are not admin";
+
+                const [userId, offset, username] = args.slice(1);
+                await Promise.all([
+                    db.set(["time", "offset", userId], Number.parseInt(offset)),
+                    db.set(["time", "username", userId], username),
+                ]);
+
+                return "yes ma'am o7";
+            },
         };
 
-        if (args.length > 2 || !Object.keys(subcommands).includes(args[0])) {
+        if (!Object.keys(subcommands).includes(args[0])) {
             return `usage: \`time (${
                 Object.keys(subcommands).toSorted().join("|")
             }) [val]\``;
@@ -777,6 +793,7 @@ client.on("messageCreate", async (message) => {
                     username: message.author.username,
                     userId: message.author.id,
                     originalSrc: message.content,
+                    isAdmin: is_admin,
                 },
             );
             outputs.push(res);
@@ -787,6 +804,7 @@ client.on("messageCreate", async (message) => {
                     username: message.author.username,
                     userId: message.author.id,
                     originalSrc: message.content,
+                    isAdmin: is_admin,
                 },
             );
             outputs.push(res);
