@@ -615,7 +615,6 @@ ${bbb}
         if (args.length == 0) return "GIVE ME A THING";
         const thing = args[0];
         const time = Math.floor(new Date().getTime() / 1000);
-        // TODO: completely broken
         await db.set(["span", userId, "start", time], thing);
         return `\`${thing}\` started ${markdownOfUnixTimestamp(time)}`;
     },
@@ -765,7 +764,7 @@ ${bbb}
 const admin_commands: string[] = ["clear", "dump", "die"];
 
 client.on("messageCreate", async (message) => {
-    if (message.author == id || !message.mentions.has(id)) return;
+    if (message.author.bot || !message.mentions.has(id)) return;
 
     const is_admin = message.author.id == mehbark;
     const cmds = message.content.toLowerCase()
