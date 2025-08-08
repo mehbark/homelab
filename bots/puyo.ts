@@ -854,9 +854,9 @@ const home = (inner: string) => `
 `;
 
 async function offsets(): Promise<[number, ...string[]][]> {
-    const entries = await db.list<number>({ prefix: ["time", "offset"] });
-
     const out = new Map<number, string[]>();
+
+    const entries = db.list<number>({ prefix: ["time", "offset"] });
 
     for await (const { key, value: offset } of entries) {
         const userId = key[2] as string;

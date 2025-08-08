@@ -17,6 +17,9 @@ in
     globalConfig = ''
       # nginx'll manage it for now :(
       auto_https off
+
+      @silly path *.tscn
+      header @silly Content-Type application/x-godot-scene
     '';
     virtualHosts."celestia.pyrope.net:80".extraConfig = ''
       root * /srv/www
