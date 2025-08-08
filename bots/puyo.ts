@@ -1167,6 +1167,42 @@ const time_page = async (
 `;
 };
 
+const flag_page = (colors: string[]): string => {
+    const offsets = colors.map((_, i) => i / colors.length);
+
+    const colors_godotified = colors.map((c) => {
+        const channels = [c.slice(0, 2), c.slice(2, 4), c.slice(4, 6)].map(
+            (x) => Number.parseInt(x, 16) / 255,
+        );
+        if (channels.some(Number.isNaN)) return `${c} is a fail`;
+        return [...channels, 1];
+    });
+
+    return `[gd_scene load_steps=3 format=3 uid="uid://bym6ehk58ifyy"]
+
+[sub_resource type="Gradient" id="Gradient_c35rn"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(${offsets.join(", ")})
+colors = PackedColorArray(${colors_godotified.flat().join(", ")})
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_yxws1"]
+gradient = SubResource("Gradient_c35rn")
+width = 1000
+height = 600
+fill_to = Vector2(0, 1)
+
+[node name="Flag" type="CenterContainer"]
+anchors_preset = -1
+anchor_right = 0.561
+anchor_bottom = 0.79
+offset_right = -0.272034
+offset_bottom = -511.92
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 2
+texture = SubResource("GradientTexture2D_yxws1")`;
+};
+
 Deno.serve(
     { port: 61200 },
     async (req) => {
@@ -1182,6 +1218,12 @@ Deno.serve(
                     headers: { "content-type": "text/html" },
                 },
             );
+        }
+
+        if (url.pathname == "/flag.tscn") {
+            return new Response(flag_page(url.searchParams.getAll("c")), {
+                headers: { "content-type": "application/x-godot-scene" },
+            });
         }
 
         const table = await board.htmlStatus();
