@@ -19,6 +19,7 @@ let basic-bot = name: src: { additionalArgs ? [] }:
           ${pkgs.deno}/bin/deno \
              ${lib.escapeShellArgs additionalArgs} \
              --allow-net --allow-read=${lib.escapeShellArg bot-config} \
+             --allow-env\
              ${lib.escapeShellArg src} ${lib.escapeShellArg bot-config}
         '';
         Restart = "on-failure";
