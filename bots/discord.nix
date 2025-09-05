@@ -11,8 +11,6 @@ let basic-bot = name: src: { additionalArgs ? [] }:
       after = [ "network.target" ];
       unitConfig = {
         Description = "${name} discord bot";
-        StartLimitIntervalSec = 30;
-        StartLimitBurst = 5;
       };
       serviceConfig = {
         ExecStart = ''
@@ -23,7 +21,9 @@ let basic-bot = name: src: { additionalArgs ? [] }:
              ${lib.escapeShellArg src} ${lib.escapeShellArg bot-config}
         '';
         Restart = "on-failure";
-        RuntimeMaxSec = "600s";
+        RestartSec = "100ms";
+        RestartSteps = 60 * 5;
+        RestartMaxDelaySec = 60 * 5;
       };
     };
   };
