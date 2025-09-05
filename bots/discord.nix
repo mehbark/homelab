@@ -20,7 +20,7 @@ let basic-bot = name: src: { additionalArgs ? [] }:
              --allow-env\
              ${lib.escapeShellArg src} ${lib.escapeShellArg bot-config}
         '';
-        Restart = "on-failure";
+        Restart = "always";
         RestartSec = "100ms";
         RestartSteps = 60 * 5;
         RestartMaxDelaySec = 60 * 5;
