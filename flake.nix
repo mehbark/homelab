@@ -50,12 +50,12 @@
       packages.deploy = pkgs.writeShellScriptBin "deploy" ''
         # nix run .#deploy <nixos config name> <server to deploy to> [<server to build on>]
         CONFIG="$1"
-        TARGET_HOST="$2"
+        TARGET_HOST="''${2-$CONFIG}"
         BUILD_HOST="''${3:-$TARGET_HOST}"
 
         echo "building $CONFIG on $BUILD_HOST and deploying to $TARGET_HOST"
 
-        NIX_SSHOPTS="-o ForwardAgent=yes" \
+        NIX_SSHOPTS="-o ForwardAgent=yes -J root@pyrope.net" \
         ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
           --fast --flake ".#$CONFIG" \
           --use-remote-sudo \
