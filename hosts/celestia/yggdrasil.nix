@@ -33,7 +33,7 @@ in
 
   services.radvd = {
     # Announce the 300::/8 prefix to eth0.
-    enable = true;
+    enable = false;
     config = ''
       interface enp2s0
       {
