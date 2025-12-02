@@ -9,6 +9,7 @@
     ./ollama.nix
     ./openssh.nix
     ./tailscale.nix
+    ./thelounge.nix
     ./yggdrasil.nix
     ../../bots/discord.nix
   ];

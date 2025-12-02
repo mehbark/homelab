@@ -56,5 +56,14 @@ in
     '';
 
     virtualHosts."[200:8d39:e4de:d1da:f7f4:1626:2743:347b]:80".extraConfig = static-file-server;
+
+    virtualHosts."lounge.cattenheimer.xyz:80".extraConfig = ''
+      reverse_proxy :${ports.thelounge}
+    '';
+
+    virtualHosts."irc-static.cattenheimer.xyz:80".extraConfig = ''
+      rewrite * /uploads{uri}
+      reverse_proxy :${ports.thelounge}
+    '';
   };
 }
