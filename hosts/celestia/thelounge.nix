@@ -13,6 +13,8 @@ in {
 
       theme = "gruvbox";
 
+      prefetch = true;
+
       fileUpload = {
         enable = true;
         # only i use this
