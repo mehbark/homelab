@@ -8,6 +8,7 @@
     ./nix.nix
     ./ollama.nix
     ./openssh.nix
+    ./prngnouns/prngnouns.nix
     ./tailscale.nix
     ./thelounge.nix
     ./yggdrasil.nix
