@@ -37,6 +37,13 @@
             (import ./hosts/derpy/configuration.nix)
           ];
         };
+
+        install = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            (import ./hosts/install/configuration.nix)
+          ];
+        };
       };
     };
 
@@ -75,6 +82,7 @@
           fi
         '';
       };
+      packages.install-iso = self.nixosConfigurations.install.config.system.build.isoImage;
     };
   };
 }
