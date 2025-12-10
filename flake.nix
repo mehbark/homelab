@@ -45,7 +45,6 @@
       pkgs,
       ...
     }:
-    let pkgs = import nixpkgs { inherit system; }; in
     {
       packages.deploy = pkgs.writeShellScriptBin "deploy" ''
         # nix run .#deploy <nixos config name> <server to deploy to> [<server to build on>]
@@ -72,7 +71,7 @@
           if [[ $# -eq 1 ]]; then
             ssh "mbk@$1" nix run nixpkgs#fastfetch -- --pipe false | ponysay -b round -W 120 -f "$1"
           else
-            fastfetch --pipe false | ponysay -b round -W 120 -f "$(hostname)"
+            fastfetch --pipe false | ponysay -b round -W 120 -f "$(hostname | sed -E 's/\..+//g')"
           fi
         '';
       };
