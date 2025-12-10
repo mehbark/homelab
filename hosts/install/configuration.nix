@@ -4,6 +4,10 @@
     (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
   ];
 
+  # According to https://wiki.nixos.org/wiki/Creating_a_NixOS_live_CD,
+  # this is ~4x faster for ~80% of the compression. worth it for me
+  isoImage.squashfsCompression = "gzip -Xcompression-level 1";
+
   environment.systemPackages = [
     pkgs.neovim
   ];
