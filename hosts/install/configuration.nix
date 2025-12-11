@@ -1,7 +1,7 @@
 { pkgs, modulesPath, ... }:
 {
   imports = [
-    (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
+    (modulesPath + "/installer/cd-dvd/installation-cd-graphical-calamares-plasma6.nix")
   ];
 
   # According to https://wiki.nixos.org/wiki/Creating_a_NixOS_live_CD,
