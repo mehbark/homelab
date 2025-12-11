@@ -4,6 +4,8 @@
     (modulesPath + "/installer/cd-dvd/installation-cd-graphical-calamares-plasma6.nix")
   ];
 
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # According to https://wiki.nixos.org/wiki/Creating_a_NixOS_live_CD,
   # this is ~4x faster for ~80% of the compression. worth it for me
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
