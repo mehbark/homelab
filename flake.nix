@@ -38,12 +38,20 @@
           ];
         };
 
+        applejack = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            (import ./hosts/applejack/configuration.nix)
+          ];
+        };
+
         install = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             (import ./hosts/install/configuration.nix)
           ];
         };
+
       };
     };
 
