@@ -1,6 +1,12 @@
 // deno-lint-ignore-file require-await
 import { Buffer } from "node:buffer";
-import { Client, Events, GatewayIntentBits } from "npm:discord.js";
+import {
+    Client,
+    Events,
+    GatewayIntentBits,
+    RoleResolvable,
+} from "npm:discord.js@^14.0.0";
+import * as prng from "jsr:@esm-alea/prng@0.3.0";
 
 const { default: { token, id } } = await import(Deno.args[0], {
     with: { type: "json" },
@@ -763,7 +769,52 @@ ${bbb}
 
 const admin_commands: string[] = ["clear", "dump", "die"];
 
+const blue_role: RoleResolvable = "1392159642657755317";
+
+const blue_seed = (): number => {
+    const today = new Date();
+    let seed = today.getUTCFullYear();
+    seed *= 100;
+    seed += today.getUTCMonth() + 1;
+    seed *= 100;
+    seed += today.getUTCDate();
+    return seed;
+};
+
+const seed = () => prng.seed([blue_seed]);
+const pick = <T>(xs: T[]): T => xs[prng.int32() % xs.length];
+const int = (lt: number): number => prng.int32() % lt;
+
+const blue_letters: string[] = "etoaisnhrldum".split("");
+
+function is_blue(message: string): boolean {
+    seed();
+
+    const length = 2 + int(3);
+    const word = Array.from({ length }).map(() => pick(blue_letters)).join("");
+
+    return message.toLowerCase().includes(word);
+}
+
+function is_unblue(message: string): boolean {
+    seed();
+
+    prng.cycle(10);
+
+    const length = 2 + int(3);
+    const word = Array.from({ length }).map(() => pick(blue_letters)).join("");
+
+    return message.toLowerCase().includes(word);
+}
+
 client.on("messageCreate", async (message) => {
+    if (is_blue(message.content)) {
+        message.member?.roles.add(blue_role, "get blued");
+    }
+    if (is_unblue(message.content)) {
+        message.member?.roles.remove(blue_role, "get unblued");
+    }
+
     if (message.author.bot || !message.mentions.has(id)) return;
 
     const is_admin = message.author.id == mehbark;
