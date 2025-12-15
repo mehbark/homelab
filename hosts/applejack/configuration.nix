@@ -88,6 +88,14 @@
   programs.steam.enable = true;
   hardware.steam-hardware.enable = true;
 
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal ];
+    config.common.default = "*";
+  };
+  services.flatpak.enable = true;
+
   nixpkgs.config.allowUnfree = true;
   # TODO: this is just hosts/celestia/nix.nix
   nix = {
@@ -112,7 +120,9 @@
   environment.systemPackages = with pkgs; [
     arandr
     git
+    maim
     neovim
+    xclip
   ];
 
   system.stateVersion = "26.05";
