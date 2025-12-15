@@ -781,7 +781,7 @@ const blue_seed = (): number => {
     return seed;
 };
 
-const seed = () => prng.seed([blue_seed]);
+const seed = () => prng.seed([blue_seed()]);
 const pick = <T>(xs: T[]): T => xs[prng.int32() % xs.length];
 const int = (lt: number): number => prng.int32() % lt;
 
