@@ -360,6 +360,11 @@ async function run(
         async "!"() {
             await popf()(stack, depth + 1);
         },
+        async "<"() {
+            const fst = popn();
+            const snd = popn();
+            push(snd < fst ? 1 : 0);
+        },
         async "get"() {
             const y = popn();
             const x = popn();
