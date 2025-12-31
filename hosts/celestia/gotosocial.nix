@@ -18,7 +18,7 @@ in
       instance-inject-mastodon-version = true;
       instance-languages = ["en"];
       accounts-allow-custom-css = true;
-      statuses-max-chars = 50000;
+      statuses-max-chars = 122500;
     };
   };
 
