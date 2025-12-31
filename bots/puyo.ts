@@ -558,9 +558,12 @@ const commands: Record<
         );
     },
     async run(args, { username }) {
-        const err = await run({ args, username, depth: 0 }).catch((e) => e);
-        if (err) return err.toString();
-        return board.status();
+        try {
+            return (await run({ args, username, depth: 0 })).map(stringOfVal)
+                .join(", ");
+        } catch (err) {
+            return `error:\n${err}`;
+        }
     },
     async define([name, ...args], { username: namespace }) {
         if (!namespace || !name || args.length == 0) {
