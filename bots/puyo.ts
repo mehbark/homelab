@@ -7,6 +7,7 @@ import {
     RoleResolvable,
 } from "npm:discord.js@^14.0.0";
 import * as prng from "jsr:@esm-alea/prng@0.3.0";
+import { Image } from "jsr:@matmen/imagescript@1.3.1";
 
 const { default: { token, id } } = await import(Deno.args[0], {
     with: { type: "json" },
@@ -305,7 +306,7 @@ async function run(
         env?: Env;
         depth: number;
     },
-): Promise<void> {
+): Promise<Val[]> {
     function explode(msg = "i esploded") {
         throw msg + "\n" + "stack:\n" +
             stack.toReversed().map((s) => `1. ${stringOfVal(s)}`).join(
@@ -429,7 +430,7 @@ async function run(
     let i = 0;
     for (let step = 0; step < 1000 && i < args.length; step++) {
         const arg = args[i];
-        const num = Number.parseInt(arg);
+        const num = Number.parseFloat(arg);
         const val = lookup(env, arg);
         if (typeof val != "undefined") {
             push(val);
@@ -482,7 +483,7 @@ async function run(
         }
         i++;
     }
-    return;
+    return stack;
 }
 
 function markdownOfUnixTimestamp(time: number): string {
@@ -764,6 +765,49 @@ ${bbb}
 
         const [subcommand, val] = args;
         return await subcommands[subcommand](val);
+    },
+    async xyimg(args, { username }) {
+        try {
+            // stack (top->bottom): h <s l a>
+            const image = new Image(256, 256);
+            for (let x = 0; x < image.width; x++) {
+                for (let y = 0; y < image.height; y++) {
+                    const src = [
+                        `${x / (image.width - 1)}`,
+                        "->x",
+                        `${y / (image.height - 1)}`,
+                        "->y",
+                        ...args,
+                    ];
+
+                    const stack = await run({
+                        args: src,
+                        username,
+                        depth: 0,
+                    });
+
+                    if (stack.length < 4) {
+                        stack.unshift(
+                            ...[1, 0.5, 1, 1].slice(0, 4 - stack.length),
+                        );
+                    }
+
+                    const [a, l, s, h] = stack.slice(-4).map((v) =>
+                        typeof v == "number" ? v : 0
+                    );
+
+                    // yes, it's one indexed. ????
+                    image.setPixelAt(
+                        x + 1,
+                        y + 1,
+                        Image.hslaToColor(h, s, l, a),
+                    );
+                }
+            }
+            return Buffer.from(await image.encode(3));
+        } catch (err) {
+            return err?.toString() ?? "what even is this error";
+        }
     },
 };
 
