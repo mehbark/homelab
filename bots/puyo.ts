@@ -781,9 +781,9 @@ ${bbb}
             for (let x = 0; x < image.width; x++) {
                 for (let y = 0; y < image.height; y++) {
                     const src = [
-                        `${x / (image.width - 1)}`,
+                        `${x / image.width}`,
                         "->x",
-                        `${y / (image.height - 1)}`,
+                        `${y / image.height}`,
                         "->y",
                         ...args,
                     ];
