@@ -927,7 +927,8 @@ client.on("messageCreate", async (message) => {
     }
     const output = outputs.at(-1) ?? "";
     if (typeof output == "string") {
-        await message.reply(output.slice(0, 2000));
+        const content = output.slice(0, 2000);
+        await message.reply(content || "(empty)");
     } else {
         await message.reply({ files: [{ attachment: output }] });
     }
