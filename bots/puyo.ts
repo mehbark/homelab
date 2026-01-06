@@ -4,6 +4,8 @@ import {
     Client,
     Events,
     GatewayIntentBits,
+    Message,
+    OmitPartialGroupDMChannel,
     RoleResolvable,
 } from "npm:discord.js@^14.0.0";
 import * as prng from "jsr:@esm-alea/prng@0.3.0";
@@ -504,6 +506,7 @@ const commands: Record<
             userId: string;
             originalSrc: string;
             isAdmin: boolean;
+            message: OmitPartialGroupDMChannel<Message<boolean>>;
         },
     ) => Promise<string | Buffer>
 > = {
@@ -817,9 +820,17 @@ ${bbb}
             return err?.toString() ?? "what even is this error";
         }
     },
+
+    async dm(args, { message }) {
+        if (args.length < 1) return "`usage: dm message`";
+
+        const chan = await message.author.createDM();
+        await chan.send(args.join(" "));
+        return "sent";
+    },
 };
 
-const admin_commands: string[] = ["clear", "dump", "die"];
+const admin_commands: string[] = ["clear", "dump", "die", "dm"];
 
 const blue_role: RoleResolvable = "1392159642657755317";
 
@@ -896,6 +907,7 @@ client.on("messageCreate", async (message) => {
                     userId: message.author.id,
                     originalSrc: message.content,
                     isAdmin: is_admin,
+                    message,
                 },
             );
             outputs.push(res);
@@ -907,6 +919,7 @@ client.on("messageCreate", async (message) => {
                     userId: message.author.id,
                     originalSrc: message.content,
                     isAdmin: is_admin,
+                    message,
                 },
             );
             outputs.push(res);
