@@ -4,6 +4,7 @@ import {
     Client,
     Events,
     GatewayIntentBits,
+    Guild,
     Message,
     OmitPartialGroupDMChannel,
     RoleResolvable,
@@ -828,11 +829,26 @@ ${bbb}
         await chan.send(args.join(" "));
         return "sent";
     },
+
+    async "reset-posters"() {
+        for await (const { key } of db.list({ prefix: ["poster"] })) {
+            await db.delete(key);
+        }
+        return "ok";
+    },
 };
 
-const admin_commands: string[] = ["clear", "dump", "die", "dm"];
+const admin_commands: string[] = [
+    "clear",
+    "dump",
+    "die",
+    "dm",
+    "reset-posters",
+];
 
 const blue_role: RoleResolvable = "1392159642657755317";
+const top_poster_role: RoleResolvable = "1462251979823779880";
+const former_top_poster_role: RoleResolvable = "1462269880765120665";
 
 const blue_seed = (): number => {
     const today = new Date();
@@ -870,6 +886,62 @@ function is_unblue(message: string): boolean {
     return message.toLowerCase().includes(word);
 }
 
+async function update_top_poster(guild: Guild) {
+    let winner = mehbark;
+    let best_score = 0n;
+    // TODO?: it's a Deno.KvU64, but whatever
+    for await (const bla of db.list<bigint>({ "prefix": ["poster"] })) {
+        if (
+            bla.value > best_score ||
+            (bla.value == best_score && Math.random() > 0.5)
+        ) {
+            winner = bla.key[1] as string;
+            best_score = bla.value;
+        }
+    }
+    const top_poster = await guild.members.fetch(winner);
+    await top_poster.roles.add(top_poster_role, "u r the top poster");
+
+    const role = guild.roles.cache.get(top_poster_role.toString());
+    if (!role) {
+        console.log("top poster role not found in cache (weird)");
+        return;
+    }
+
+    for (const [id, member] of role.members) {
+        if (id == winner) continue;
+
+        await member.roles.remove(
+            top_poster_role,
+            "u r no longer the top poster",
+        );
+        await member.roles.add(
+            former_top_poster_role,
+            "but u r now a former top poster",
+        );
+    }
+}
+
+async function top_poster_leaderboard(): Promise<
+    Array<{ id: string; posts: bigint }>
+> {
+    const leaderboard = await Array.fromAsync(
+        db.list<bigint>({ prefix: ["poster"] }),
+    );
+
+    return leaderboard.map(({ key: [_poster, id], value: posts }) => ({
+        id: id.toString(),
+        posts,
+    })).toSorted(({ posts: a }, { posts: b }) => {
+        if (a > b) {
+            return -1;
+        } else if (a < b) {
+            return 1;
+        }
+        return 0;
+    });
+}
+
 client.on("messageCreate", async (message) => {
     if (is_blue(message.content)) {
         message.member?.roles.add(blue_role, "get blued");
@@ -877,6 +949,9 @@ client.on("messageCreate", async (message) => {
     if (is_unblue(message.content)) {
         message.member?.roles.remove(blue_role, "get unblued");
     }
+
+    const guild = message.guild;
+    if (guild) update_top_poster(guild);
 
     if (message.author.bot || !message.mentions.has(id)) return;
 
@@ -1320,6 +1395,8 @@ layout_mode = 2
 texture = SubResource("GradientTexture2D_yxws1")`;
 };
 
+const ID_REGEX: RegExp = /^\d{17,21}$/;
+
 Deno.serve(
     { port: 61200 },
     async (req) => {
@@ -1341,6 +1418,40 @@ Deno.serve(
             return new Response(flag_page(url.searchParams.getAll("c")), {
                 headers: { "content-type": "application/x-godot-scene" },
             });
+        }
+
+        // POST is NOT idempotent :D
+        if (url.pathname == "/top-poster") {
+            const id = url.searchParams.get("id");
+            const leaderboard = await top_poster_leaderboard();
+            if (req.method != "POST" || id === null || !ID_REGEX.test(id)) {
+                const body = `\
+POST https://puyo.cattenheimer.xyz?id=<discord-id>
+
+${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
+`;
+
+                return new Response(body, {
+                    status: 400,
+                });
+            }
+
+            const key = ["poster", id];
+
+            const res = await db.atomic()
+                .check({ key, versionstamp: null })
+                .set(key, new Deno.KvU64(1n)).commit();
+
+            if (!res.ok) {
+                // key exists
+                await db.atomic().sum(["poster", id], 1n).commit();
+            }
+
+            return new Response(
+                `${await db.get<Deno.KvU64>(key).then(({ value }) =>
+                    value?.value
+                )}\n`,
+            );
         }
 
         const table = await board.htmlStatus();
