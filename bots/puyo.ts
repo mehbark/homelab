@@ -1426,7 +1426,7 @@ Deno.serve(
             const leaderboard = await top_poster_leaderboard();
             if (req.method != "POST" || id === null || !ID_REGEX.test(id)) {
                 const body = `\
-POST https://puyo.cattenheimer.xyz?id=<discord-id>
+POST https://puyo.cattenheimer.xyz/top-poster?id=<discord-id>
 
 ${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
 `;
