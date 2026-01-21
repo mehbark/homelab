@@ -4,7 +4,6 @@
     ./caddy.nix
     ./firewall.nix
     ./forgejo.nix
-    ./gotosocial.nix
     ./hardware-configuration.nix
     ./nix.nix
     ./ollama.nix
