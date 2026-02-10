@@ -639,10 +639,9 @@ ${bbb}
     },
     async stop(args, { userId }) {
         if (args.length == 0) return "GIVE ME A THING";
-        const thing = args[0];
-        const time = Math.floor(new Date().getTime() / 1000);
-        await db.set(["span", userId, "stop", time], thing);
-        return `\`${thing}\` stopped ${markdownOfUnixTimestamp(time)}`;
+        const span = args[0];
+        const time = await stop_span({ userId, span });
+        return `\`${span}\` stopped ${markdownOfUnixTimestamp(time)}`;
     },
     async spans(args, { userId }) {
         if (args.length > 1) return "give me a thing or give me no thing";
@@ -836,6 +835,20 @@ ${bbb}
         }
         return "ok";
     },
+
+    async "mcai-stop"(args, { userId }) {
+        if (args.length != 1) return "usage: mcai-stop <span>";
+
+        await db.set(["mcai-stop", userId], args[0]);
+
+        return "mcai-unstop to undo";
+    },
+
+    async "mcai-unstop"(_, { userId }) {
+        await db.delete(["mcai-stop", userId]);
+
+        return "m,cai will no longer stop anything except sadness";
+    },
 };
 
 const admin_commands: string[] = [
@@ -942,12 +955,32 @@ async function top_poster_leaderboard(): Promise<
     });
 }
 
+async function stop_span(
+    { span, userId }: { span: string; userId: string },
+): Promise<number> {
+    const time = Math.floor(new Date().getTime() / 1000);
+    await db.set(["span", userId, "stop", time], span);
+    return time;
+}
+
+async function mcai_stop(userId: string) {
+    const entry = await db.get<string>(["mcai-stop", userId]);
+    if (entry.value == null) {
+        return;
+    }
+    stop_span({ userId, span: entry.value });
+}
+
 client.on("messageCreate", async (message) => {
     if (is_blue(message.content)) {
         message.member?.roles.add(blue_role, "get blued");
     }
     if (is_unblue(message.content)) {
         message.member?.roles.remove(blue_role, "get unblued");
+    }
+
+    if (message.content == "man, computers are incredible") {
+        await mcai_stop(message.author.id);
     }
 
     const guild = message.guild;
