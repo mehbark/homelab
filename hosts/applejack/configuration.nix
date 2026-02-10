@@ -42,6 +42,12 @@
         pulseaudio
      ];
     };
+
+    videoDrivers = [ "amdgpu" ];
+
+    deviceSection = ''
+    Option "VariableRefresh" "false"
+    '';
   };
 
   services.xserver.xkb = {
@@ -88,6 +94,16 @@
   programs.steam.enable = true;
   hardware.steam-hardware.enable = true;
 
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
+
+  hardware.opengl.enable = true;
+
+  powerManagement.cpuFreqGovernor = "performance";
+
+  boot.initrd.kernelModules = [ "amdgpu" ];
 
   xdg.portal = {
     enable = true;
@@ -123,6 +139,8 @@
     maim
     neovim
     xclip
+    brightnessctl
+    btop
   ];
 
   system.stateVersion = "26.05";
