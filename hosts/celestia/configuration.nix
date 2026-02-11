@@ -11,6 +11,7 @@
     ./prngnouns/prngnouns.nix
     ./tailscale.nix
     ./thelounge.nix
+    ./tuwunel.nix
     ./yggdrasil.nix
     ../../bots/discord.nix
   ];
