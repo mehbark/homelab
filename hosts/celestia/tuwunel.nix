@@ -11,6 +11,7 @@ in
             allow_registration = true;
             # TODO: come on man
             registration_token_file = "/srv/tuwunel/token.txt";
+            new_user_displayname_suffix = "";
         };
     };
 
