@@ -26,12 +26,21 @@ client.once(Events.ClientReady, (c) => {
 client.login(token);
 
 const correct = "man, computers are incredible";
+const birds =
+    `🦃 🐔 🐓 🐣 🐤 🐥 🐦 🐧 🕊️ 🦅 🦆 🦢 🦉 🦤 🪶 🦩 🦚 🦜 🪽 🐦‍⬛ 🪿 🐦‍🔥`
+        .split(" ");
+
+const c_id = "397120199897120769";
 
 client.on("messageCreate", (message) => {
     if (message.author.id == id) return;
 
+    if (message.author.id == c_id && Math.random() < 0.05) {
+        message.react(birds[Math.floor(Math.random() * birds.length)]);
+    }
+
     if (message.content == "man, computers are interesting") {
-        if (message.author.id == "397120199897120769") {
+        if (message.author.id == c_id) {
             message.reply("<:widesmile:1111490825252253706>");
         } else {
             message.reply("YOU ARE NOT CEFQRN! D:<");
