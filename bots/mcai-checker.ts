@@ -35,8 +35,13 @@ const c_id = "397120199897120769";
 client.on("messageCreate", (message) => {
     if (message.author.id == id) return;
 
-    if (message.author.id == c_id && Math.random() < 0.05) {
-        message.react(birds[Math.floor(Math.random() * birds.length)]);
+    if (message.author.id == c_id) {
+        if (
+            Math.random() < 0.05 ||
+            /bir|tweet|hoo|chirp|trill|warble|caw|coo/i.test(message.content)
+        ) {
+            message.react(birds[Math.floor(Math.random() * birds.length)]);
+        }
     }
 
     if (message.content == "man, computers are interesting") {
