@@ -25,6 +25,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent,
     ],
 });
@@ -498,6 +499,148 @@ function markdownOfUnixTimestamp(time: number): string {
     return `<t:${Math.floor(time)}:f>`;
 }
 
+const ttt = {
+    player_X: {
+        id: null as string | null,
+        move: null as number | null,
+    },
+
+    player_O: {
+        id: null as string | null,
+        move: null as number | null,
+    },
+
+    board: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+
+    squareToEmoji(i: number): string {
+        let name;
+        if (this.board[i] == 1) {
+            name = "x";
+        } else if (this.board[i] == 2) {
+            name = "o";
+        } else {
+            name = [
+                "one",
+                "two",
+                "three",
+                "four",
+                "five",
+                "six",
+                "seven",
+                "eight",
+                "nine",
+            ][i];
+        }
+        return `:${name}:`;
+    },
+
+    pretty_board(): string {
+        return [[0, 1, 2], [3, 4, 5], [6, 7, 8]].map((row) =>
+            row.map(this.squareToEmoji.bind(this)).join("")
+        ).join("\n");
+    },
+
+    add_player(id: string): "x" | "o" | "full" {
+        if (this.player_X.id === null || id === this.player_X.id) {
+            this.player_X.id = id;
+            return "x";
+        }
+
+        if (this.player_O.id === null || id === this.player_O.id) {
+            this.player_O.id = id;
+            return "o";
+        }
+
+        return "full";
+    },
+
+    maybe_finish_move():
+        | "conflict!"
+        | "waiting for other player"
+        | "success!"
+        | ":x: wins!"
+        | ":o: wins!"
+        | "draw." {
+        if (this.player_X.move === null || this.player_O.move === null) {
+            return "waiting for other player";
+        }
+
+        if (this.player_X.move === this.player_O.move) return "conflict!";
+
+        this.board[this.player_X.move - 1] = 1;
+        this.board[this.player_O.move - 1] = 2;
+
+        this.player_X.move = null;
+        this.player_O.move = null;
+
+        const result = this.maybe_end_game();
+        if (result !== null) return result;
+
+        return "success!";
+    },
+
+    maybe_end_game(): ":x: wins!" | ":o: wins!" | "draw." | null {
+        const win_messages = [":x: wins!", ":o: wins!"] as const;
+
+        const lines = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6],
+        ] as const;
+
+        for (const [a, b, c] of lines) {
+            if (
+                this.board[a] != 0 && this.board[a] == this.board[b] &&
+                this.board[b] == this.board[c]
+            ) {
+                const message = win_messages[this.board[a] - 1];
+                this.reset();
+                return message;
+            }
+        }
+
+        if (this.board.flat().every((n) => n != 0)) {
+            this.reset();
+            return "draw.";
+        }
+
+        return null;
+    },
+
+    reset() {
+        this.player_X.id = null;
+        this.player_O.id = null;
+        this.board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    },
+
+    move(id: string, index: number): string {
+        if (this.board[index - 1] != 0) return "that spot's taken";
+
+        if (id === this.player_X.id) {
+            if (this.player_X.move === null) {
+                this.player_X.move = index;
+                return this.maybe_finish_move();
+            } else {
+                return "you ALREADY moved. DO NOT TEST ME";
+            }
+        } else if (id === this.player_O.id) {
+            if (this.player_O.move === null) {
+                this.player_O.move = index;
+                return this.maybe_finish_move();
+            } else {
+                return "you ALREADY moved. DO NOT TEST ME";
+            }
+        } else {
+            return "who are you";
+        }
+    },
+};
+
 const commands: Record<
     string,
     (
@@ -849,6 +992,48 @@ ${bbb}
 
         return "m,cai will no longer stop anything except sadness";
     },
+
+    async "ttt"(_, { message, userId }) {
+        const chan = await message.author.createDM();
+
+        switch (ttt.add_player(userId)) {
+            case "x":
+                await chan.send("you are :x:");
+                break;
+            case "o":
+                await chan.send("you are :o:");
+                break;
+            case "full":
+                return "game's full. sorry :(";
+        }
+        await chan.send(ttt.pretty_board());
+
+        const responses = await chan.awaitMessages({
+            filter: (m) =>
+                m.author.id === userId ||
+                (userId === "admin" && m.author.id === mehbark),
+            max: 1,
+            time: 30 * 1000,
+        });
+
+        const response = responses.first()?.content ?? "fail";
+        const index = Number.parseInt(response);
+        if (Number.isNaN(index) || index < 1 || index > 9) return "fool. 1-9";
+
+        const result = ttt.move(userId, index);
+
+        if (result === "success!") {
+            return ttt.pretty_board();
+        }
+
+        console.log(`result: ${result}`);
+        await chan.send(result);
+        return result;
+    },
+
+    async "atatat"(args, moreArgs) {
+        return await commands.ttt(args, { ...moreArgs, userId: "admin" });
+    },
 };
 
 const admin_commands: string[] = [
@@ -857,6 +1042,7 @@ const admin_commands: string[] = [
     "die",
     "dm",
     "reset-posters",
+    "atatat",
 ];
 
 const blue_role: RoleResolvable = "1392159642657755317";
@@ -1017,7 +1203,10 @@ client.on("messageCreate", async (message) => {
                     isAdmin: is_admin,
                     message,
                 },
-            );
+            ).catch((err) => {
+                console.error(err);
+                return "an error happened";
+            });
             outputs.push(res);
         } else {
             const res = await commands.run(
@@ -1029,7 +1218,10 @@ client.on("messageCreate", async (message) => {
                     isAdmin: is_admin,
                     message,
                 },
-            );
+            ).catch((err) => {
+                console.error(err);
+                return "an error happened";
+            });
             outputs.push(res);
         }
     }
