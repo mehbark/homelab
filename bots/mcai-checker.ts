@@ -26,19 +26,22 @@ client.once(Events.ClientReady, (c) => {
 client.login(token);
 
 const correct = "man, computers are incredible";
-const birds =
-    `🦃 🐔 🐓 🐣 🐤 🐥 🐦 🐧 🕊️ 🦅 🦆 🦢 🦉 🦤 🪶 🦩 🦚 🦜 🪽 🐦‍⬛ 🪿 🐦‍🔥`
-        .split(" ");
+const birds = `🦃 🐔 🐓 🐣 🐤 🐥 🐦 🐧 🕊️ 🦅 🦆 🦢 🦉 🦤 🪶 🦩 🦚 🦜 🐦‍⬛ 🪿 🐦‍🔥`
+    .split(" ");
 
 const c_id = "397120199897120769";
 
 client.on("messageCreate", (message) => {
     if (message.author.id == id) return;
 
+    if (is_april_fools()) return;
+
     if (message.author.id == c_id) {
         if (
             Math.random() < 0.05 ||
-            /bir|tweet|hoo|chirp|trill|warble|caw|coo|squawk/i.test(message.content)
+            /bir|tweet|hoo|chirp|trill|warble|caw|coo|squawk/i.test(
+                message.content,
+            )
         ) {
             message.react(birds[Math.floor(Math.random() * birds.length)]);
         }
@@ -98,16 +101,6 @@ function char_bstring(c: string) {
     return c ? c.charCodeAt(0).toString(16).padStart(6, "0") : "000000";
 }
 
-/* OOD
-const right = "\x1b[0;32m";
-const wrong = "\x1b[1;31m";
-const reset = "\x1b[0m"
-
-function char_pair(exp, got) {
-    return `${exp===got?right:wrong}${exp === got ? "right" : "WRONG"}${reset}\t${char_bstring(exp)}\t${exp===got?"":wrong}${char_bstring(got)}${reset}\t${exp??" "}\t${exp===got?"":wrong}${got??" "}${reset}`;
-}
-*/
-
 function is_mcai_like(str: string) {
     const normalized = str.normalize("NFKD").toLowerCase().replace(
         /[^a-z]/g,
@@ -121,4 +114,9 @@ function is_mcai_like(str: string) {
 
 function is_malformed(str: string) {
     return str != correct;
+}
+
+function is_april_fools(): boolean {
+    const today = new Date();
+    return today.getUTCDate() == 1 && today.getUTCMonth() == 3;
 }
