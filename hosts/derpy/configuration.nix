@@ -5,8 +5,6 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      # jellyfin is probably best on celestia but i'm doing the ripping here so
-      ./jellyfin.nix
     ];
 
   nix = {
@@ -138,9 +136,6 @@
   espeak
   abcde
   vlc
-  (pkgs.writeShellScriptBin "fightcade" ''
-    flatpak run com.fightcade.Fightcade
-  '')
   ];
 
   services.gvfs.enable = true;
