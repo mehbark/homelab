@@ -28,6 +28,10 @@
     };
   };
 
+  nixpkgs.config.permittedInsecurePackages = [
+    "broadcom-sta-6.30.223.271-59-6.12.60"
+  ];
+
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -79,7 +83,7 @@
         i3status # gives you the default i3 status bar
         i3lock #default i3 screen locker
         i3blocks #if you are planning on using i3blocks over i3status
-	pulseaudio
+        pulseaudio
      ];
     };
   };
@@ -119,6 +123,8 @@
   # Install firefox.
   programs.firefox.enable = true;
 
+  programs.light.enable = true;
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
@@ -132,6 +138,9 @@
   espeak
   abcde
   vlc
+  (pkgs.writeShellScriptBin "fightcade" ''
+    flatpak run com.fightcade.Fightcade
+  '')
   ];
 
   services.gvfs.enable = true;
@@ -163,5 +172,4 @@
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "24.11"; # Did you read the comment?
-
 }
