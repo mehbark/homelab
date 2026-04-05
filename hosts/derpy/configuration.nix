@@ -70,10 +70,6 @@
       xterm.enable = false;
     };
 
-    displayManager = {
-        defaultSession = "none+i3";
-    };
-
     windowManager.i3 = {
       enable = true;
       extraPackages = with pkgs; [
@@ -85,6 +81,8 @@
      ];
     };
   };
+
+  services.displayManager.defaultSession = "none+i3";
 
   # Configure keymap in X11
   services.xserver.xkb = {
@@ -98,7 +96,7 @@
   services.printing.enable = true;
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -153,6 +151,23 @@
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   services.tailscale.enable = true;
+
+  programs.steam.enable = true;
+  hardware.steam-hardware.enable = true;
+
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
+
+  powerManagement.cpuFreqGovernor = "performance";
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal ];
+    config.common.default = "*";
+  };
+  services.flatpak.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
