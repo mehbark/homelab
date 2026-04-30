@@ -11,6 +11,7 @@ let basic-bot = name: src: { additionalArgs ? [] }:
       after = [ "network.target" ];
       unitConfig = {
         Description = "${name} discord bot";
+        StartLimitIntervalSec = 0;
       };
       serviceConfig = {
         ExecStart = ''
@@ -22,8 +23,8 @@ let basic-bot = name: src: { additionalArgs ? [] }:
         '';
         Restart = "always";
         RestartSec = "100ms";
-        RestartSteps = 60 * 5;
-        RestartMaxDelaySec = 60 * 5;
+        RestartSteps = 10;
+        RestartMaxDelaySec = 60 * 2;
       };
     };
   };
