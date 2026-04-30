@@ -71,8 +71,8 @@
 
         NIX_SSHOPTS="-o ForwardAgent=yes -J root@pyrope.net" \
         ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
-          --fast --flake ".#$CONFIG" \
-          --use-remote-sudo \
+          --no-reexec --flake ".#$CONFIG" \
+          --sudo \
           --target-host "mbk@$TARGET_HOST" \
           --build-host "mbk@$BUILD_HOST"
       '';
