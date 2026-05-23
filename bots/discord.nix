@@ -1,5 +1,5 @@
 { lib, config, pkgs, ... }:
-let basic-bot = name: src: { additionalArgs ? [] }:
+let basic-bot = name: src: { additionalArgs ? [], environment ? {} }:
   let
     cfg = config.bots.discord.${name};
     bot-config = "/home/mbk/bots/discord/${name}.json";
@@ -26,6 +26,7 @@ let basic-bot = name: src: { additionalArgs ? [] }:
         RestartSteps = 10;
         RestartMaxDelaySec = 60 * 2;
       };
+      inherit environment;
     };
   };
 in
@@ -38,6 +39,10 @@ lib.foldr lib.attrsets.recursiveUpdate {} [
       "--allow-read=/home/mbk/bots/discord/puyo.kv"
       "--allow-read=/home/mbk/bots/discord/dr-dump.txt"
       "--allow-write=/home/mbk/bots/discord/puyo.kv"
+      "--allow-read=${./puyo-checks.html}"
     ];
+    environment = {
+      CHECKS_PATH = "${./puyo-checks.html}";
+    };
   })
 ]

@@ -1620,6 +1620,11 @@ layout_mode = 2
 texture = SubResource("GradientTexture2D_yxws1")`;
 };
 
+console.log(`Reading checks page from ${Deno.env.get("CHECKS_PATH") ?? ""}`);
+const CHECKS_PAGE: string = new TextDecoder("utf-8").decode(
+    await Deno.readFile(Deno.env.get("CHECKS_PATH") ?? ""),
+);
+
 const ID_REGEX: RegExp = /^\d{17,21}$/;
 
 type Handler = {
@@ -1688,6 +1693,29 @@ ${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
                     value?.value
                 )}\n`,
             );
+        },
+    },
+    {
+        match(url) {
+            return url.pathname.startsWith("/checks");
+        },
+        async run({ url }) {
+            const n = url.searchParams.get("n");
+            const name = url.searchParams.get("l");
+            if (
+                name && n && Number.parseInt(n) > 0
+            ) {
+                return new Response(CHECKS_PAGE, {
+                    headers: { "content-type": "text/html" },
+                });
+            } else {
+                return new Response(
+                    "GET /checks?n=<positive integer>&l=<name>\n\nentirely local, sorrz",
+                    {
+                        status: 400,
+                    },
+                );
+            }
         },
     },
 ];
