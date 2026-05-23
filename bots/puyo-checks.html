@@ -22,11 +22,15 @@
                     const check = document.createElement("input");
                     check.type = "checkbox";
 
-                    const key = JSON.stringify({ name, i });
-                    check.checked = !!JSON.parse(localStorage.getItem(key));
+                    const key = `${JSON.stringify(name)}-${i}`;
+                    check.checked = !!localStorage.getItem(key);
 
                     check.onchange = e => {
-                        localStorage.setItem(key, check.checked);
+                        if (check.checked) {
+                            localStorage.setItem(key, "1");
+                        } else {
+                            localStorage.removeItem(key);
+                        }
                     };
 
                     label.appendChild(check);
