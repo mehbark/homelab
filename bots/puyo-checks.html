@@ -12,8 +12,23 @@
                 const n = Number.parseInt(url.searchParams.get("n") ?? "10");
                 const name = url.searchParams.get("l") ?? "unnamed";
 
-                document.title = `${name} (checks)`;
                 document.getElementById("title").innerText = name;
+
+                const progress = document.getElementById("progress");
+                progress.max = n;
+
+                const done = document.getElementById("done");
+                const update = () => {
+                    const checked = [
+                        ...document.querySelectorAll("input"),
+                    ].filter(check => check.checked).length;
+
+                    const finished = checked == n;
+                    done.ariaHidden = !finished;
+                    document.title = `${finished ? "🎉 " : ""}${name} (checks)`;
+
+                    progress.value = checked;
+                };
 
                 const list = document.getElementById("list");
                 for (let i = 1; i <= n; i++) {
@@ -31,12 +46,14 @@
                         } else {
                             localStorage.removeItem(key);
                         }
+                        update();
                     };
 
                     label.appendChild(check);
                     item.appendChild(label);
                     list.appendChild(item);
                 }
+                update();
             }
 
             window.addEventListener("DOMContentLoaded", main);
@@ -55,11 +72,32 @@
                 margin-inline-start: 0.75rem;
                 /* margin-block: 1.5rem; */
             }
+
+            #done {
+                opacity: 100%;
+                transition: opacity 0.1s;
+                user-select: none;
+            }
+
+            #done[aria-hidden="true"] {
+                opacity: 0%;
+            }
+
+            #progress {
+                width: 100%;
+            }
         </style>
     </head>
     <body>
         <main>
-            <h1 id="title"></h1>
+            <h1>
+                <span id="done" aria-hidden="true" aria-label="completed:"
+                    >🎉 </span
+                ><span id="title"></span>
+            </h1>
+            <div id="stats">
+                <progress id="progress" aria-label="progress"></progress>
+            </div>
             <ol id="list" type="1"></ol>
         </main>
     </body>
