@@ -1622,13 +1622,17 @@ texture = SubResource("GradientTexture2D_yxws1")`;
 
 const ID_REGEX: RegExp = /^\d{17,21}$/;
 
-Deno.serve(
-    { port: 61200 },
-    async (req) => {
-        const is_htmx = req.headers.get("hx-request") == "true";
-        const url = new URL(req.url);
+type Handler = {
+    match: (url: URL) => boolean;
+    run: (_: { is_htmx: boolean; url: URL; req: Request }) => Promise<Response>;
+};
 
-        if (url.pathname == "/time") {
+const handlers: Handler[] = [
+    {
+        match(url) {
+            return url.pathname == "/time";
+        },
+        async run({ url }) {
             const update_bg = url.searchParams.get("update-bg") !== null;
             const friends = url.searchParams.getAll("f");
             return new Response(
@@ -1637,16 +1641,23 @@ Deno.serve(
                     headers: { "content-type": "text/html" },
                 },
             );
-        }
-
-        if (url.pathname == "/flag.tscn") {
+        },
+    },
+    {
+        match(url) {
+            return url.pathname == "/flag.tscn";
+        },
+        async run({ url }) {
             return new Response(flag_page(url.searchParams.getAll("c")), {
                 headers: { "content-type": "application/x-godot-scene" },
             });
-        }
-
-        // POST is NOT idempotent :D
-        if (url.pathname == "/top-poster") {
+        },
+    },
+    {
+        match(url) {
+            return url.pathname == "/top-poster";
+        },
+        async run({ url, req }) {
             const id = url.searchParams.get("id");
             const leaderboard = await top_poster_leaderboard();
             if (req.method != "POST" || id === null || !ID_REGEX.test(id)) {
@@ -1677,6 +1688,20 @@ ${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
                     value?.value
                 )}\n`,
             );
+        },
+    },
+];
+
+Deno.serve(
+    { port: 61200 },
+    async (req) => {
+        const is_htmx = req.headers.get("hx-request") == "true";
+        const url = new URL(req.url);
+
+        for (const handler of handlers) {
+            if (handler.match(url)) {
+                return handler.run({ is_htmx, url, req });
+            }
         }
 
         const table = await board.htmlStatus();
