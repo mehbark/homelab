@@ -32,6 +32,13 @@ const birds = `🦃 🐔 🐓 🐣 🐤 🐥 🐦 🐧 🕊️ 🦅 🦆 🦢 �
 const c_id = "397120199897120769";
 
 client.on("messageCreate", (message) => {
+    if (Math.random() < 1 / 300) {
+        const mocked = message.content.split("").map((c, i) =>
+            i % 2 ? c.toUpperCase() : c.toLowerCase()
+        ).join("").slice(0, 1900);
+        message.reply(mocked);
+    }
+
     if (message.author.id == id) return;
 
     if (is_april_fools()) return;
