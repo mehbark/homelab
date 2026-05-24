@@ -1700,22 +1700,9 @@ ${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
             return url.pathname.startsWith("/checks");
         },
         async run({ url }) {
-            const n = url.searchParams.get("n");
-            const name = url.searchParams.get("l");
-            if (
-                name && n && Number.parseInt(n) > 0
-            ) {
-                return new Response(CHECKS_PAGE, {
-                    headers: { "content-type": "text/html" },
-                });
-            } else {
-                return new Response(
-                    "GET /checks?n=<positive integer>&l=<name>\n\nentirely local, sorrz",
-                    {
-                        status: 400,
-                    },
-                );
-            }
+            return new Response(CHECKS_PAGE, {
+                headers: { "content-type": "text/html" },
+            });
         },
     },
 ];
