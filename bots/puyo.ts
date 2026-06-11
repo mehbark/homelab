@@ -1034,6 +1034,20 @@ ${bbb}
     async "atatat"(args, moreArgs) {
         return await commands.ttt(args, { ...moreArgs, userId: "admin" });
     },
+
+    "5"() {
+        const CHAPTER_5 = Temporal.Instant.from("2026-06-24 11:00-04:00");
+        const until = Temporal.Now.instant().until(CHAPTER_5).round({
+            largestUnit: "day",
+        });
+        return Promise.resolve(
+            `\`${until.days.toString().padStart(2, "0")}:${
+                until.hours.toString().padStart(2, "0")
+            }:${until.minutes.toString().padStart(2, "0")}:${
+                until.seconds.toString().padStart(2, "0")
+            }\``,
+        );
+    },
 };
 
 const admin_commands: string[] = [
@@ -1699,7 +1713,7 @@ ${leaderboard.map(({ id, posts }) => `${id.padStart(21)}: ${posts}`).join("\n")}
         match(url) {
             return url.pathname.startsWith("/checks");
         },
-        async run({ url }) {
+        async run() {
             return new Response(CHECKS_PAGE, {
                 headers: { "content-type": "text/html" },
             });
