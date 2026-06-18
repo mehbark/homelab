@@ -1093,7 +1093,7 @@ function is_unblue(message: string): boolean {
 
     prng.cycle(10);
 
-    const length = 2 + int(3);
+    const length = 2 + int(2);
     const word = Array.from({ length }).map(() => pick(blue_letters)).join("");
 
     return message.toLowerCase().includes(word);
