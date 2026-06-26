@@ -641,6 +641,34 @@ const ttt = {
     },
 };
 
+const until = (instant: Temporal.Instant) => {
+    const diff = Temporal.Now.instant().until(instant).round({
+        largestUnit: "day",
+    });
+    const passed = diff.sign < 0;
+    const until = diff.abs();
+
+    const display = [until.days, until.hours, until.minutes, until.seconds]
+        .map((n) => n.toString().padStart(2, "0")).join(":");
+    return Promise.resolve(
+        `\`${passed ? "-" : ""}${display}\``,
+    );
+};
+
+const DR_RELEASE_DATES = {
+    [1]: Temporal.Instant.from("2018-10-31 11:00-04:00"),
+    [2]: Temporal.Instant.from("2021-09-17 11:00-04:00"),
+    [3]: Temporal.Instant.from("2025-06-04 11:00-04:00"),
+    [4]: Temporal.Instant.from("2025-06-04 11:00-04:00"),
+    [5]: Temporal.Instant.from("2026-06-24 11:00-04:00"),
+    [6]: Temporal.Instant.from("2027-12-31 11:00-04:00"),
+    [7]: Temporal.Instant.from("+102027-12-31 11:00-04:00"),
+} as const;
+
+const dr_countdown =
+    (chapter: keyof typeof DR_RELEASE_DATES): () => Promise<string> => () =>
+        Promise.resolve(until(DR_RELEASE_DATES[chapter]));
+
 const commands: Record<
     string,
     (
@@ -1035,29 +1063,11 @@ ${bbb}
         return await commands.ttt(args, { ...moreArgs, userId: "admin" });
     },
 
-    "5"() {
-        const CHAPTER_5 = Temporal.Instant.from("2026-06-24 11:00-04:00");
-        return Promise.resolve(until(CHAPTER_5));
-    },
-
-    "6"() {
-        const CHAPTER_6 = Temporal.Instant.from("2126-06-24 11:00-04:00");
-        return Promise.resolve(until(CHAPTER_6));
-    },
-};
-
-// TODO: fix past dates (or don't)
-const until = (instant: Temporal.Instant) => {
-    const until = Temporal.Now.instant().until(instant).round({
-        largestUnit: "day",
-    });
-    return Promise.resolve(
-        `\`${until.days.toString().padStart(2, "0")}:${
-            until.hours.toString().padStart(2, "0")
-        }:${until.minutes.toString().padStart(2, "0")}:${
-            until.seconds.toString().padStart(2, "0")
-        }\``,
-    );
+    ...Object.fromEntries(
+        ([1, 2, 3, 4, 5, 6, 7] as const).map(
+            (ch) => [ch.toString(), dr_countdown(ch)],
+        ),
+    ),
 };
 
 const admin_commands: string[] = [
