@@ -1037,17 +1037,27 @@ ${bbb}
 
     "5"() {
         const CHAPTER_5 = Temporal.Instant.from("2026-06-24 11:00-04:00");
-        const until = Temporal.Now.instant().until(CHAPTER_5).round({
-            largestUnit: "day",
-        });
-        return Promise.resolve(
-            `\`${until.days.toString().padStart(2, "0")}:${
-                until.hours.toString().padStart(2, "0")
-            }:${until.minutes.toString().padStart(2, "0")}:${
-                until.seconds.toString().padStart(2, "0")
-            }\``,
-        );
+        return Promise.resolve(until(CHAPTER_5));
     },
+
+    "6"() {
+        const CHAPTER_6 = Temporal.Instant.from("2126-06-24 11:00-04:00");
+        return Promise.resolve(until(CHAPTER_6));
+    },
+};
+
+// TODO: fix past dates (or don't)
+const until = (instant: Temporal.Instant) => {
+    const until = Temporal.Now.instant().until(instant).round({
+        largestUnit: "day",
+    });
+    return Promise.resolve(
+        `\`${until.days.toString().padStart(2, "0")}:${
+            until.hours.toString().padStart(2, "0")
+        }:${until.minutes.toString().padStart(2, "0")}:${
+            until.seconds.toString().padStart(2, "0")
+        }\``,
+    );
 };
 
 const admin_commands: string[] = [
