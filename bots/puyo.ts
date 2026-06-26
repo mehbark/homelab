@@ -651,7 +651,9 @@ const until = (instant: Temporal.Instant) => {
     const display = [until.days, until.hours, until.minutes, until.seconds]
         .map((n) => n.toString().padStart(2, "0")).join(":");
     return Promise.resolve(
-        `\`${passed ? "-" : ""}${display}\``,
+        `\`${passed ? "-" : ""}${display}\` (<t:${
+            Math.floor(instant.epochMilliseconds / 1000)
+        }:R>)`,
     );
 };
 
