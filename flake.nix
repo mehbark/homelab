@@ -28,6 +28,7 @@
             {
               environment.systemPackages = [puyo-lang.packages.x86_64-linux.puyo-lang];
             }
+            (import ./build-info.nix { inherit self; })
           ];
         };
 
@@ -35,6 +36,7 @@
           system = "x86_64-linux";
           modules = [
             (import ./hosts/derpy/configuration.nix)
+            (import ./build-info.nix { inherit self; })
           ];
         };
 
@@ -42,6 +44,7 @@
           system = "x86_64-linux";
           modules = [
             (import ./hosts/applejack/configuration.nix)
+            (import ./build-info.nix { inherit self; })
           ];
         };
 
@@ -49,6 +52,7 @@
           system = "x86_64-linux";
           modules = [
             (import ./hosts/install/configuration.nix)
+            (import ./build-info.nix { inherit self; })
           ];
         };
 
