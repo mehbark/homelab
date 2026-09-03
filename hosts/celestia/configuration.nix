@@ -21,6 +21,8 @@
 
   environment.systemPackages = [
     pkgs.sl
+    pkgs.cowsay
+    pkgs.ponysay
   ];
 
   boot = {
