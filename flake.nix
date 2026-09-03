@@ -5,6 +5,11 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     puyo-lang.url = "git+https://git.pyrope.net/mbk/puyo-lang.git";
+
+    comin = {
+      url = "github:nlewo/comin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
@@ -12,6 +17,7 @@
     nixpkgs,
     flake-parts,
     puyo-lang,
+    comin,
   }:
   flake-parts.lib.mkFlake {inherit inputs;} {
     systems = [
@@ -29,6 +35,8 @@
               environment.systemPackages = [puyo-lang.packages.x86_64-linux.puyo-lang];
             }
             (import ./build-info.nix { inherit self; })
+            comin.nixosModules.comin
+            (import ./comin.nix { inherit comin; })
           ];
         };
 
@@ -37,6 +45,8 @@
           modules = [
             (import ./hosts/derpy/configuration.nix)
             (import ./build-info.nix { inherit self; })
+            comin.nixosModules.comin
+            (import ./comin.nix { inherit comin; })
           ];
         };
 
@@ -45,6 +55,8 @@
           modules = [
             (import ./hosts/applejack/configuration.nix)
             (import ./build-info.nix { inherit self; })
+            comin.nixosModules.comin
+            (import ./comin.nix { inherit comin; })
           ];
         };
 
