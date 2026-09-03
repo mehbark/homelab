@@ -19,6 +19,10 @@
   bots.discord.mcai-checker.enable = true;
   bots.discord.puyo.enable = true;
 
+  environment.systemPackages = [
+    pkgs.sl
+  ];
+
   boot = {
     loader = {
       systemd-boot.enable = true;
