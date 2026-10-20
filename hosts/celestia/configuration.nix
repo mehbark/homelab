@@ -14,6 +14,7 @@
     ./tuwunel.nix
     ./yggdrasil.nix
     ../../bots/discord.nix
+    ../../certificate-denylist.nix
   ];
 
   bots.discord.mcai-checker.enable = true;

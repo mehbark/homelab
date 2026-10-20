@@ -2,6 +2,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ../../certificate-denylist.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
