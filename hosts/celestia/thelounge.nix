@@ -6,10 +6,6 @@ in {
     enable = true;
     inherit port;
 
-    plugins = with pkgs.theLoungePlugins; [
-      themes.gruvbox
-    ];
-
     extraConfig = {
       reverseProxy = true;
 
