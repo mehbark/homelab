@@ -24,6 +24,8 @@
     pkgs.sl
     pkgs.cowsay
     pkgs.ponysay
+    pkgs.git
+    pkgs.neovim
   ];
 
   boot = {
